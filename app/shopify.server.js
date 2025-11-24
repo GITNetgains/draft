@@ -7,24 +7,7 @@ import {
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
 import fetch from "node-fetch";
-import { BillingInterval } from "@shopify/shopify-app-remix/server";
 
-export const MONTHLY_PLAN = {
-  name: 'Monthly subscription',  // Must match exactly
-  amount: 5,
-  currencyCode: 'USD',
-  interval: BillingInterval.Every30Days,
-  trialDays: 14,
-  test: true
-};
-export const ANNUAL_PLAN = {
-  name: 'Annual subscription',
-  amount: 100,
-  currencyCode: 'USD',
-  interval: BillingInterval.Annual,
-  trialDays: 14,
-  test: true
-};
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
@@ -34,29 +17,17 @@ const shopify = shopifyApp({
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: AppDistribution.AppStore,
+
   future: {
     unstable_newEmbeddedAuthStrategy: true,
     removeRest: true,
   },
+
   ...(process.env.SHOP_CUSTOM_DOMAIN
     ? { customShopDomains: [process.env.SHOP_CUSTOM_DOMAIN] }
     : {}),
-     billing: {
-    [MONTHLY_PLAN.name]: {  // Use the name as key
-      amount: MONTHLY_PLAN.amount,
-      currencyCode: MONTHLY_PLAN.currencyCode,
-      interval: MONTHLY_PLAN.interval,
-      trialDays: MONTHLY_PLAN.trialDays,
-      test: MONTHLY_PLAN.test
-    },
-     [ANNUAL_PLAN.name]: {
-    amount: ANNUAL_PLAN.amount,
-    currencyCode: ANNUAL_PLAN.currencyCode,
-    interval: ANNUAL_PLAN.interval,
-    trialDays: ANNUAL_PLAN.trialDays,
-    test: ANNUAL_PLAN.test
-  }
-  }
+
+  // ⭐ Billing is now fully removed — nothing here ⭐
 });
 
 export default shopify;
@@ -67,6 +38,3 @@ export const unauthenticated = shopify.unauthenticated;
 export const login = shopify.login;
 export const registerWebhooks = shopify.registerWebhooks;
 export const sessionStorage = shopify.sessionStorage;
-
-
-

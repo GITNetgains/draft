@@ -166,20 +166,39 @@
     setTimeout(() => { t.style.opacity = '0'; t.addEventListener('transitionend', () => t.remove()); }, dur);
   }
 
-  async function loadCountries(countryId, stateId) {
-    const countrySel = document.getElementById(countryId);
-    const stateSel = document.getElementById(stateId);
-    try {
-      const res = await fetch('https://countriesnow.space/api/v0.1/countries/states');
-      const { data } = await res.json();
-      data.forEach(c => { countrySel.add(new Option(c.name, c.name)); });
-      countrySel.addEventListener('change', () => {
-        const sel = data.find(x => x.name === countrySel.value);
-        stateSel.innerHTML = '<option value="">Select state</option>';
-        sel?.states.forEach(s => stateSel.add(new Option(s.name, s.name)));
-      });
-    } catch (e) { console.log('Country fetch error', e); }
+ async function loadCountries(selectId, stateId) {
+  const countrySelect = document.getElementById(selectId);
+  const stateSelect = document.getElementById(stateId);
+
+  try {
+    // Load countries_full.json locally from Shopify assets
+    const res = await fetch('{{ "countries_full.json" | asset_url }}');
+    const data = await res.json();
+
+    const countries = data.data || data; // supports both structures
+
+    // Fill country dropdown
+    countries.forEach(c => {
+      countrySelect.add(new Option(c.name, c.name));
+    });
+
+    // When country changes → load states
+    countrySelect.addEventListener('change', () => {
+      const selected = countries.find(c => c.name === countrySelect.value);
+
+      stateSelect.innerHTML = '<option value="">Select state</option>';
+
+      if (selected?.states?.length) {
+        selected.states.forEach(state => {
+          stateSelect.add(new Option(state, state));
+        });
+      }
+    });
+  } catch (e) {
+    console.error("Error loading countries_full.json", e);
   }
+}
+
 
   // Improved cart fetching with rate limit protection
   let cartCache = null;
