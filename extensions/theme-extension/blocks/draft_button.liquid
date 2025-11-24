@@ -466,7 +466,7 @@ async function loadCountries(selectId, stateId) {
         const discount = cart.discount_codes?.[0] || null;
 
         try {
-          const response = await fetch('https://draft-order-app-seven.vercel.app/api/create-draft-order', {
+          const response = await fetch('https://draft-lyart.vercel.app/api/create-draft-order', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ customer, cart, address, discount, billingAddress, useShipping, shop })
