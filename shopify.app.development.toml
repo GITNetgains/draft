@@ -1,9 +1,9 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "9fd275d862c675142a61cf6f07aff2dc"
-name = "Draft Order App"
-handle = "draft-orders-app-4"
-application_url = "https://japanese-fg-relationships-puzzle.trycloudflare.com"
+client_id = "5f7b8e1fd63414b1711ed83fa32c8489"
+name = "draft-order-button"
+handle = "draft-orders-button"
+application_url = "https://newcastle-fwd-forgot-die.trycloudflare.com"
 embedded = true
 
 [build]
@@ -27,7 +27,7 @@ api_version = "2025-07"
 scopes = "write_themes,read_themes,read_draft_orders,write_products,read_products,read_customers,write_draft_orders,write_customers"
 
 [auth]
-redirect_urls = ["https://japanese-fg-relationships-puzzle.trycloudflare.com/auth/callback", "https://japanese-fg-relationships-puzzle.trycloudflare.com/auth/shopify/callback", "https://japanese-fg-relationships-puzzle.trycloudflare.com/api/auth/callback"]
+redirect_urls = ["https://newcastle-fwd-forgot-die.trycloudflare.com/auth/callback", "https://newcastle-fwd-forgot-die.trycloudflare.com/auth/shopify/callback", "https://newcastle-fwd-forgot-die.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false

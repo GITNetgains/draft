@@ -1,7 +1,7 @@
 
-client_id = "9fd275d862c675142a61cf6f07aff2dc"
-name = "Draft Order App"
-handle = "draft-orders-app-4" 
+client_id = "5f7b8e1fd63414b1711ed83fa32c8489"
+name = "draft-order-button"
+handle = "draft-orders-button" 
 application_url = "https://draft-lyart.vercel.app/"
 embedded = true
 

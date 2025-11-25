@@ -1,7 +1,7 @@
 <!-- Custom Draft Order Button + Modal -->
 <script id="x-draft-data-hub" type="application/json">
 {
-  "shop": {{ shop.permanent_domain | json }},
+ 
   "customer": {
     "id": {{ customer.id | json }},
     "email": {{ customer.email | json }},
@@ -285,7 +285,7 @@
     closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
 
     submitBtn.addEventListener('click', async () => {
-      const shop = draftData.shop;
+      
       const required = [
         { id: 'x-ship-country', name: 'Country' },
         { id: 'x-ship-addr1', name: 'Address' },
@@ -355,7 +355,7 @@
             address: shipping,
             billingAddress: billing,
             discount: cart.discount_codes?.[0] || null,
-            shop,
+          
             useShipping: document.getElementById('x-same-billing-chk').checked
           })
         });

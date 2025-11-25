@@ -2,17 +2,20 @@ import { useFetcher, useLoaderData } from "@remix-run/react";
 import db from "../db.server";
 import { json } from "@remix-run/node";
 import { useEffect, useState } from "react";
-import { authenticate } from "../shopify.server";
+
+// ⚠️ SINGLE STORE CONFIGURATION
+const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN;
 
 /* ======================= */
 /*        LOADER           */
 /* ======================= */
 export async function loader({ request }) {
+  // Validate environment variable
+  if (!SHOPIFY_STORE_DOMAIN) {
+    throw new Error("Missing SHOPIFY_STORE_DOMAIN in environment variables");
+  }
 
-  const { session } = await authenticate.admin(request); // ✅ get shop from session
-  const shop = session.shop;
-
-  if (!shop) throw new Error("Missing shop query param");
+  const shop = SHOPIFY_STORE_DOMAIN;
 
   // First try to find settings for this shop
   let setting = await db.setting.findUnique({
@@ -29,16 +32,17 @@ export async function loader({ request }) {
   return json({ setting });
 }
 
-
-
 /* ======================= */
 /*        ACTION           */
 /* ======================= */
 export async function action({ request }) {
+  // Validate environment variable
+  if (!SHOPIFY_STORE_DOMAIN) {
+    throw new Error("Missing SHOPIFY_STORE_DOMAIN in environment variables");
+  }
+
   const formData = await request.formData();
-  const { session } = await authenticate.admin(request); // ✅ same here
-  const shop = session?.shop;
-  if (!shop) throw new Error("Missing shop query param");
+  const shop = SHOPIFY_STORE_DOMAIN;
 
   const doubleEnabled = formData.get("enabled") === "true";
 
@@ -59,7 +63,6 @@ export async function action({ request }) {
 
   return json({ success: true });
 }
-
 
 /* ======================= */
 /*       COMPONENT         */

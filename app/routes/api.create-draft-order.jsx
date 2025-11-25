@@ -3,83 +3,38 @@ import { json } from "@remix-run/node";
 import { cors } from "remix-utils/cors";
 import db from "../db.server";
 import nodemailer from "nodemailer";
-import { authenticate } from "../shopify.server";
+
+
+const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN; // e.g., "yourstore.myshopify.com"
+const SHOPIFY_ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN; // Your Admin API access token
 
 export async function action({ request }) {
   console.log(`[${new Date().toISOString()}] Starting /api/create-draft-order`);
 
+  // Validate environment variables
+  if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_ADMIN_TOKEN) {
+    return await sendError(
+      request,
+      "Server configuration error: Missing SHOPIFY_STORE_DOMAIN or SHOPIFY_ADMIN_TOKEN",
+      500
+    );
+  }
+
   let body;
   try {
-    
     body = await request.json();
   } catch {
     return await sendError(request, "Invalid JSON in request body", 400);
   }
 
-  const { customer, cart, address, billingAddress, useShipping, shop: shopFromBody } = body;
+  const { customer, cart, address, billingAddress, useShipping } = body;
   if (!cart?.items?.length) return await sendError(request, "Cart is empty", 400);
 
-  let shop, accessToken;
+  // Use the single configured store and token
+  const shop = SHOPIFY_STORE_DOMAIN;
+  const accessToken = SHOPIFY_ADMIN_TOKEN;
 
-  // Step 1: Try normal Shopify authentication (preferred)
-  try {
-    const authResult = await authenticate.admin(request);
-    shop = authResult.session.shop;
-    accessToken = authResult.session.accessToken;
-    console.log(`Authenticated via OAuth for shop: ${shop}`);
-  } catch (authError) {
-    console.warn("OAuth failed, falling back to DB token...", authError.message);
-
-    // Step 2: Fallback to DB — but validate token first!
-    if (!shopFromBody) {
-      return await sendError(request, "Authentication failed and no shop provided in body", 401);
-    }
-
-    const sessionRecord = await db.session.findFirst({
-      where: { shop: shopFromBody },
-    });
-
-    if (!sessionRecord?.accessToken) {
-      return await sendError(
-        request,
-        "No valid session found. Please reinstall the app on your store.",
-        401
-      );
-    }
-
-    // Step 3: Validate the stored token is still working
-    const testUrl = `https://${shopFromBody}/admin/api/2024-10/shop.json`;
-    try {
-      const testRes = await fetch(testUrl, {
-        headers: {
-          "X-Shopify-Access-Token": sessionRecord.accessToken,
-        },
-      });
-
-      if (!testRes.ok) {
-        const errorText = await testRes.text();
-        console.error("Stored token invalid:", testRes.status, errorText);
-        return await sendError(
-          request,
-          "Your app needs to be reinstalled. Access token is no longer valid. <a href='/auth?shop=" +
-            shopFromBody +
-            "'>Click here to reinstall</a>",
-          401
-        );
-      }
-    } catch (testErr) {
-      console.error("Token test failed:", testErr.message);
-      return await sendError(request, "Unable to validate access token. Please reinstall the app.", 401);
-    }
-
-    shop = sessionRecord.shop;
-    accessToken = sessionRecord.accessToken;
-    console.log(`Using valid stored token for ${shop}`);
-  }
-
-  if (!shop || !accessToken) {
-    return await sendError(request, "Missing shop or access token", 500);
-  }
+  console.log(`Using configured store: ${shop}`);
 
   // Load or create settings
   let setting = await db.setting.findUnique({ where: { shop } });
@@ -211,132 +166,132 @@ export async function action({ request }) {
       createdOrders.push(await createDraft(setting.singleDiscount, "Your Discount", setting.singleTag));
     }
 
-   // Send Email
-let emailSent = false;
+    // Send Email
+    let emailSent = false;
 
-console.log("Email check - Customer email:", customer?.email);
-console.log("Email check - SMTP_USER exists:", !!process.env.SMTP_USER);
-console.log("Email check - SMTP_PASS exists:", !!process.env.SMTP_PASS);
+    console.log("Email check - Customer email:", customer?.email);
+    console.log("Email check - SMTP_USER exists:", !!process.env.SMTP_USER);
+    console.log("Email check - SMTP_PASS exists:", !!process.env.SMTP_PASS);
 
-if (customer?.email && process.env.SMTP_USER && process.env.SMTP_PASS) {
-  try {
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+    if (customer?.email && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      try {
+        const transporter = nodemailer.createTransport({
+          host: "smtp.gmail.com",
+          port: 465,
+          secure: true,
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          },
+        });
 
-    // Verify transporter connection
-    await transporter.verify();
-    console.log("SMTP connection verified successfully");
+        // Verify transporter connection
+        await transporter.verify();
+        console.log("SMTP connection verified successfully");
 
-    const order = createdOrders[0];
-    let itemsHtml = "";
-    let total = 0;
+        const order = createdOrders[0];
+        let itemsHtml = "";
+        let total = 0;
 
-    order.lineItems.edges.forEach(({ node }) => {
-      const price = parseFloat(node.originalUnitPriceSet.shopMoney.amount);
-      const lineTotal = price * node.quantity;
-      total += lineTotal;
-      const img = node.variant?.image?.url || "https://via.placeholder.com/80";
+        order.lineItems.edges.forEach(({ node }) => {
+          const price = parseFloat(node.originalUnitPriceSet.shopMoney.amount);
+          const lineTotal = price * node.quantity;
+          total += lineTotal;
+          const img = node.variant?.image?.url || "https://via.placeholder.com/80";
 
-      itemsHtml += `
-        <div style="display:flex; gap:16px; padding:12px 0; border-bottom:1px solid #eee;">
-          <img src="${img}" width="60" height="60" style="object-fit:cover; border-radius:6px;">
-          <div style="flex:1;">
-            <div style="font-weight:600;">${node.title}</div>
-            ${node.variant?.title !== "Default Title" ? `<div style="color:#666; font-size:14px;">${node.variant.title}</div>` : ""}
-            <div style="color:#666; margin-top:4px;">Qty: ${node.quantity}</div>
-          </div>
-          <div style="font-weight:600;">${node.originalUnitPriceSet.shopMoney.currencyCode} ${lineTotal.toFixed(2)}</div>
-        </div>`;
-    });
+          itemsHtml += `
+            <div style="display:flex; gap:16px; padding:12px 0; border-bottom:1px solid #eee;">
+              <img src="${img}" width="60" height="60" style="object-fit:cover; border-radius:6px;">
+              <div style="flex:1;">
+                <div style="font-weight:600;">${node.title}</div>
+                ${node.variant?.title !== "Default Title" ? `<div style="color:#666; font-size:14px;">${node.variant.title}</div>` : ""}
+                <div style="color:#666; margin-top:4px;">Qty: ${node.quantity}</div>
+              </div>
+              <div style="font-weight:600;">${node.originalUnitPriceSet.shopMoney.currencyCode} ${lineTotal.toFixed(2)}</div>
+            </div>`;
+        });
 
-    const currency = order.totalPriceSet.shopMoney.currencyCode;
-    const orderTotal = parseFloat(order.totalPriceSet.shopMoney.amount).toFixed(2);
-    const shopName = shop.replace(".myshopify.com", "");
+        const currency = order.totalPriceSet.shopMoney.currencyCode;
+        const orderTotal = parseFloat(order.totalPriceSet.shopMoney.amount).toFixed(2);
+        const shopName = shop.replace(".myshopify.com", "");
 
-    // ACTUAL EMAIL HTML - This was missing!
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f5f5f5;">
-        <div style="max-width:600px; margin:0 auto; background:#fff; padding:32px;">
-          
-          <div style="text-align:center; margin-bottom:24px;">
-            <h1 style="margin:0; font-size:24px; color:#333;">Your Order is Ready!</h1>
-            <p style="color:#666; margin-top:8px;">Order ${order.name}</p>
-          </div>
-          
-          <p style="color:#333; line-height:1.6;">
-            Hi ${customer?.first_name || "there"},
-          </p>
-          
-          <p style="color:#333; line-height:1.6;">
-            Thank you for shopping with ${shopName}! Your draft order has been created and is ready for payment.
-          </p>
-          
-          <div style="background:#f9f9f9; border-radius:8px; padding:20px; margin:24px 0;">
-            <h3 style="margin:0 0 16px 0; font-size:16px; color:#333;">Order Summary</h3>
-            ${itemsHtml}
-            <div style="display:flex; justify-content:space-between; padding-top:16px; font-weight:700; font-size:18px;">
-              <span>Total</span>
-              <span>${currency} ${orderTotal}</span>
+        const html = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f5f5f5;">
+            <div style="max-width:600px; margin:0 auto; background:#fff; padding:32px;">
+              
+              <div style="text-align:center; margin-bottom:24px;">
+                <h1 style="margin:0; font-size:24px; color:#333;">Your Order is Ready!</h1>
+                <p style="color:#666; margin-top:8px;">Order ${order.name}</p>
+              </div>
+              
+              <p style="color:#333; line-height:1.6;">
+                Hi ${customer?.first_name || "there"},
+              </p>
+              
+              <p style="color:#333; line-height:1.6;">
+                Thank you for shopping with ${shopName}! Your draft order has been created and is ready for payment.
+              </p>
+              
+              <div style="background:#f9f9f9; border-radius:8px; padding:20px; margin:24px 0;">
+                <h3 style="margin:0 0 16px 0; font-size:16px; color:#333;">Order Summary</h3>
+                ${itemsHtml}
+                <div style="display:flex; justify-content:space-between; padding-top:16px; font-weight:700; font-size:18px;">
+                  <span>Total</span>
+                  <span>${currency} ${orderTotal}</span>
+                </div>
+              </div>
+              
+              <div style="text-align:center; margin:32px 0;">
+                <a href="${order.invoiceUrl}" style="display:inline-block; background:#000; color:#fff; padding:14px 32px; border-radius:6px; text-decoration:none; font-weight:600;">
+                  Complete Payment
+                </a>
+              </div>
+              
+              <p style="color:#666; font-size:14px; line-height:1.6;">
+                If you have any questions about your order, please don't hesitate to contact us.
+              </p>
+              
+              <hr style="border:none; border-top:1px solid #eee; margin:24px 0;">
+              
+              <p style="color:#999; font-size:12px; text-align:center;">
+                © ${new Date().getFullYear()} ${shopName}. All rights reserved.
+              </p>
+              
             </div>
-          </div>
-          
-          <div style="text-align:center; margin:32px 0;">
-            <a href="${order.invoiceUrl}" style="display:inline-block; background:#000; color:#fff; padding:14px 32px; border-radius:6px; text-decoration:none; font-weight:600;">
-              Complete Payment
-            </a>
-          </div>
-          
-          <p style="color:#666; font-size:14px; line-height:1.6;">
-            If you have any questions about your order, please don't hesitate to contact us.
-          </p>
-          
-          <hr style="border:none; border-top:1px solid #eee; margin:24px 0;">
-          
-          <p style="color:#999; font-size:12px; text-align:center;">
-            © ${new Date().getFullYear()} ${shopName}. All rights reserved.
-          </p>
-          
-        </div>
-      </body>
-      </html>
-    `;
+          </body>
+          </html>
+        `;
 
-    console.log("Sending email to:", customer.email);
-    
-    const mailResult = await transporter.sendMail({
-      from: `"${shopName}" <${process.env.SMTP_USER}>`,
-      to: customer.email,
-      subject: "Your order is ready – complete payment anytime!",
-      html,
-    });
+        console.log("Sending email to:", customer.email);
+        
+        const mailResult = await transporter.sendMail({
+          from: `"${shopName}" <${process.env.SMTP_USER}>`,
+          to: customer.email,
+          subject: "Your order is ready – complete payment anytime!",
+          html,
+        });
 
-    console.log("Email sent successfully:", mailResult.messageId);
-    emailSent = true;
-    
-  } catch (emailErr) {
-    console.error("Email failed:", emailErr.message);
-    console.error("Full email error:", emailErr);
-  }
-} else {
-  console.log("Email skipped - missing requirements:", {
-    hasCustomerEmail: !!customer?.email,
-    hasSMTPUser: !!process.env.SMTP_USER,
-    hasSMTPPass: !!process.env.SMTP_PASS,
-  });
-}
+        console.log("Email sent successfully:", mailResult.messageId);
+        emailSent = true;
+        
+      } catch (emailErr) {
+        console.error("Email failed:", emailErr.message);
+        console.error("Full email error:", emailErr);
+      }
+    } else {
+      console.log("Email skipped - missing requirements:", {
+        hasCustomerEmail: !!customer?.email,
+        hasSMTPUser: !!process.env.SMTP_USER,
+        hasSMTPPass: !!process.env.SMTP_PASS,
+      });
+    }
+
     return await cors(
       request,
       json({ success: true, drafts: createdOrders, emailSent }),
