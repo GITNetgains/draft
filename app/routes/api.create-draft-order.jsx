@@ -1,19 +1,48 @@
 // app/routes/api.create-draft-order.jsx
 import { json } from "@remix-run/node";
-import { cors } from "remix-utils/cors";
 import db from "../db.server";
 import nodemailer from "nodemailer";
 
+const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN;
+const SHOPIFY_ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
 
-const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN; // e.g., "yourstore.myshopify.com"
-const SHOPIFY_ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN; // Your Admin API access token
+// Reusable SMTP transporter (connection pooling)
+let emailTransporter = null;
+function getEmailTransporter() {
+  if (!emailTransporter && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    emailTransporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      pool: true, // Enable connection pooling
+      maxConnections: 5,
+      maxMessages: 100,
+    });
+  }
+  return emailTransporter;
+}
+
+// Manual CORS helper
+function getCorsHeaders(request) {
+  return {
+    "Access-Control-Allow-Origin": request.headers.get("Origin") || "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Vary": "Origin",
+  };
+}
 
 export async function action({ request }) {
+  const startTime = Date.now();
   console.log(`[${new Date().toISOString()}] Starting /api/create-draft-order`);
 
   // Validate environment variables
   if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_ADMIN_TOKEN) {
-    return await sendError(
+    return sendError(
       request,
       "Server configuration error: Missing SHOPIFY_STORE_DOMAIN or SHOPIFY_ADMIN_TOKEN",
       500
@@ -24,13 +53,12 @@ export async function action({ request }) {
   try {
     body = await request.json();
   } catch {
-    return await sendError(request, "Invalid JSON in request body", 400);
+    return sendError(request, "Invalid JSON in request body", 400);
   }
 
   const { customer, cart, address, billingAddress, useShipping } = body;
-  if (!cart?.items?.length) return await sendError(request, "Cart is empty", 400);
+  if (!cart?.items?.length) return sendError(request, "Cart is empty", 400);
 
-  // Use the single configured store and token
   const shop = SHOPIFY_STORE_DOMAIN;
   const accessToken = SHOPIFY_ADMIN_TOKEN;
 
@@ -153,162 +181,159 @@ export async function action({ request }) {
 
   try {
     let createdOrders = [];
-    if (setting.doubleDraftOrdersEnabled) {
-      // Create two orders only if both discounts are set > 0
-      if (setting.discount1 > 0 && setting.discount2 > 0) {
-        createdOrders.push(await createDraft(setting.discount1, "Discount Option 1", setting.tag1));
-        createdOrders.push(await createDraft(setting.discount2, "Discount Option 2", setting.tag2));
-      } else {
-        // Fallback to single if double enabled but discounts not set
-        createdOrders.push(await createDraft(setting.singleDiscount, "Your Discount", setting.singleTag));
-      }
+    
+    // Check if double draft orders are enabled
+    if (setting.doubleDraftOrdersEnabled && setting.discount1 > 0 && setting.discount2 > 0) {
+      // Create TWO draft orders in PARALLEL (faster)
+      console.log("Creating DOUBLE draft orders with discounts:", setting.discount1, setting.discount2);
+      
+      const [order1, order2] = await Promise.all([
+        createDraft(setting.discount1, "Discount Option 1", setting.tag1 || ""),
+        createDraft(setting.discount2, "Discount Option 2", setting.tag2 || "")
+      ]);
+      
+      createdOrders.push(order1, order2);
+      console.log("Two draft orders created successfully");
+      
     } else {
-      createdOrders.push(await createDraft(setting.singleDiscount, "Your Discount", setting.singleTag));
+      // Create SINGLE draft order
+      console.log("Creating SINGLE draft order with discount:", setting.singleDiscount);
+      
+      const order = await createDraft(
+        setting.singleDiscount || 0, 
+        "Your Discount", 
+        setting.singleTag || ""
+      );
+      
+      createdOrders.push(order);
+      console.log("Single draft order created successfully");
     }
 
-    // Send Email
-    let emailSent = false;
+    console.log(`Draft orders created in ${Date.now() - startTime}ms`);
 
-    console.log("Email check - Customer email:", customer?.email);
-    console.log("Email check - SMTP_USER exists:", !!process.env.SMTP_USER);
-    console.log("Email check - SMTP_PASS exists:", !!process.env.SMTP_PASS);
-
+    // OPTIMIZATION: Send email asynchronously (don't wait for it)
     if (customer?.email && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      try {
-        const transporter = nodemailer.createTransport({
-          host: "smtp.gmail.com",
-          port: 465,
-          secure: true,
-          auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-          },
-        });
-
-        // Verify transporter connection
-        await transporter.verify();
-        console.log("SMTP connection verified successfully");
-
-        const order = createdOrders[0];
-        let itemsHtml = "";
-        let total = 0;
-
-        order.lineItems.edges.forEach(({ node }) => {
-          const price = parseFloat(node.originalUnitPriceSet.shopMoney.amount);
-          const lineTotal = price * node.quantity;
-          total += lineTotal;
-          const img = node.variant?.image?.url || "https://via.placeholder.com/80";
-
-          itemsHtml += `
-            <div style="display:flex; gap:16px; padding:12px 0; border-bottom:1px solid #eee;">
-              <img src="${img}" width="60" height="60" style="object-fit:cover; border-radius:6px;">
-              <div style="flex:1;">
-                <div style="font-weight:600;">${node.title}</div>
-                ${node.variant?.title !== "Default Title" ? `<div style="color:#666; font-size:14px;">${node.variant.title}</div>` : ""}
-                <div style="color:#666; margin-top:4px;">Qty: ${node.quantity}</div>
-              </div>
-              <div style="font-weight:600;">${node.originalUnitPriceSet.shopMoney.currencyCode} ${lineTotal.toFixed(2)}</div>
-            </div>`;
-        });
-
-        const currency = order.totalPriceSet.shopMoney.currencyCode;
-        const orderTotal = parseFloat(order.totalPriceSet.shopMoney.amount).toFixed(2);
-        const shopName = shop.replace(".myshopify.com", "");
-
-        const html = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          </head>
-          <body style="margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f5f5f5;">
-            <div style="max-width:600px; margin:0 auto; background:#fff; padding:32px;">
-              
-              <div style="text-align:center; margin-bottom:24px;">
-                <h1 style="margin:0; font-size:24px; color:#333;">Your Order is Ready!</h1>
-                <p style="color:#666; margin-top:8px;">Order ${order.name}</p>
-              </div>
-              
-              <p style="color:#333; line-height:1.6;">
-                Hi ${customer?.first_name || "there"},
-              </p>
-              
-              <p style="color:#333; line-height:1.6;">
-                Thank you for shopping with ${shopName}! Your draft order has been created and is ready for payment.
-              </p>
-              
-              <div style="background:#f9f9f9; border-radius:8px; padding:20px; margin:24px 0;">
-                <h3 style="margin:0 0 16px 0; font-size:16px; color:#333;">Order Summary</h3>
-                ${itemsHtml}
-                <div style="display:flex; justify-content:space-between; padding-top:16px; font-weight:700; font-size:18px;">
-                  <span>Total</span>
-                  <span>${currency} ${orderTotal}</span>
-                </div>
-              </div>
-              
-              <div style="text-align:center; margin:32px 0;">
-                <a href="${order.invoiceUrl}" style="display:inline-block; background:#000; color:#fff; padding:14px 32px; border-radius:6px; text-decoration:none; font-weight:600;">
-                  Complete Payment
-                </a>
-              </div>
-              
-              <p style="color:#666; font-size:14px; line-height:1.6;">
-                If you have any questions about your order, please don't hesitate to contact us.
-              </p>
-              
-              <hr style="border:none; border-top:1px solid #eee; margin:24px 0;">
-              
-              <p style="color:#999; font-size:12px; text-align:center;">
-                © ${new Date().getFullYear()} ${shopName}. All rights reserved.
-              </p>
-              
-            </div>
-          </body>
-          </html>
-        `;
-
-        console.log("Sending email to:", customer.email);
-        
-        const mailResult = await transporter.sendMail({
-          from: `"${shopName}" <${process.env.SMTP_USER}>`,
-          to: customer.email,
-          subject: "Your order is ready – complete payment anytime!",
-          html,
-        });
-
-        console.log("Email sent successfully:", mailResult.messageId);
-        emailSent = true;
-        
-      } catch (emailErr) {
-        console.error("Email failed:", emailErr.message);
-        console.error("Full email error:", emailErr);
-      }
-    } else {
-      console.log("Email skipped - missing requirements:", {
-        hasCustomerEmail: !!customer?.email,
-        hasSMTPUser: !!process.env.SMTP_USER,
-        hasSMTPPass: !!process.env.SMTP_PASS,
+      // Fire and forget - don't await
+      sendEmailAsync(customer, createdOrders[0], shop).catch(err => {
+        console.error("Background email failed:", err.message);
       });
     }
 
-    return await cors(
-      request,
-      json({ success: true, drafts: createdOrders, emailSent }),
-      { origin: request.headers.get("Origin") || "*", methods: ["POST", "OPTIONS"] }
+    // Return immediately without waiting for email
+    return json(
+      { 
+        success: true, 
+        drafts: createdOrders,
+        emailQueued: !!(customer?.email && process.env.SMTP_USER && process.env.SMTP_PASS)
+      },
+      { headers: getCorsHeaders(request) }
     );
   } catch (error) {
     console.error("Draft creation failed:", error.message);
-    return await sendError(request, error.message, 500);
+    return sendError(request, error.message, 500);
   }
 }
 
-// Helper to send consistent errors
-async function sendError(request, message, status = 500) {
-  return await cors(
-    request,
-    json({ success: false, error: message }, { status }),
-    { origin: request.headers.get("Origin") || "*", methods: ["POST", "OPTIONS"] }
+// OPTIMIZATION: Async email function (non-blocking)
+async function sendEmailAsync(customer, order, shop) {
+  try {
+    const transporter = getEmailTransporter();
+    if (!transporter) return;
+
+    let itemsHtml = "";
+    order.lineItems.edges.forEach(({ node }) => {
+      const price = parseFloat(node.originalUnitPriceSet.shopMoney.amount);
+      const lineTotal = price * node.quantity;
+      const img = node.variant?.image?.url || "https://via.placeholder.com/80";
+
+      itemsHtml += `
+        <div style="display:flex; gap:16px; padding:12px 0; border-bottom:1px solid #eee;">
+          <img src="${img}" width="60" height="60" style="object-fit:cover; border-radius:6px;">
+          <div style="flex:1;">
+            <div style="font-weight:600;">${node.title}</div>
+            ${node.variant?.title !== "Default Title" ? `<div style="color:#666; font-size:14px;">${node.variant.title}</div>` : ""}
+            <div style="color:#666; margin-top:4px;">Qty: ${node.quantity}</div>
+          </div>
+          <div style="font-weight:600;">${node.originalUnitPriceSet.shopMoney.currencyCode} ${lineTotal.toFixed(2)}</div>
+        </div>`;
+    });
+
+    const currency = order.totalPriceSet.shopMoney.currencyCode;
+    const orderTotal = parseFloat(order.totalPriceSet.shopMoney.amount).toFixed(2);
+    const shopName = shop.replace(".myshopify.com", "");
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f5f5f5;">
+        <div style="max-width:600px; margin:0 auto; background:#fff; padding:32px;">
+          
+          <div style="text-align:center; margin-bottom:24px;">
+            <h1 style="margin:0; font-size:24px; color:#333;">Your Order is Ready!</h1>
+            <p style="color:#666; margin-top:8px;">Order ${order.name}</p>
+          </div>
+          
+          <p style="color:#333; line-height:1.6;">
+            Hi ${customer?.first_name || "there"},
+          </p>
+          
+          <p style="color:#333; line-height:1.6;">
+            Thank you for shopping with ${shopName}! Your draft order has been created and is ready for payment.
+          </p>
+          
+          <div style="background:#f9f9f9; border-radius:8px; padding:20px; margin:24px 0;">
+            <h3 style="margin:0 0 16px 0; font-size:16px; color:#333;">Order Summary</h3>
+            ${itemsHtml}
+            <div style="display:flex; justify-content:space-between; padding-top:16px; font-weight:700; font-size:18px;">
+              <span>Total</span>
+              <span>${currency} ${orderTotal}</span>
+            </div>
+          </div>
+          
+          <div style="text-align:center; margin:32px 0;">
+            <a href="${order.invoiceUrl}" style="display:inline-block; background:#000; color:#fff; padding:14px 32px; border-radius:6px; text-decoration:none; font-weight:600;">
+              Complete Payment
+            </a>
+          </div>
+          
+          <p style="color:#666; font-size:14px; line-height:1.6;">
+            If you have any questions about your order, please don't hesitate to contact us.
+          </p>
+          
+          <hr style="border:none; border-top:1px solid #eee; margin:24px 0;">
+          
+          <p style="color:#999; font-size:12px; text-align:center;">
+            © ${new Date().getFullYear()} ${shopName}. All rights reserved.
+          </p>
+          
+        </div>
+      </body>
+      </html>
+    `;
+
+    await transporter.sendMail({
+      from: `"${shopName}" <${process.env.SMTP_USER}>`,
+      to: customer.email,
+      subject: "Your order is ready – complete payment anytime!",
+      html,
+    });
+
+    console.log("Email sent successfully to:", customer.email);
+  } catch (err) {
+    console.error("Email error:", err.message);
+    throw err;
+  }
+}
+
+// Helper to send consistent errors with CORS
+function sendError(request, message, status = 500) {
+  return json(
+    { success: false, error: message },
+    { status, headers: getCorsHeaders(request) }
   );
 }
 
@@ -317,12 +342,7 @@ export async function loader({ request }) {
   if (request.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": request.headers.get("Origin") || "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        Vary: "Origin",
-      },
+      headers: getCorsHeaders(request),
     });
   }
   return new Response("Method Not Allowed", { status: 405 });
