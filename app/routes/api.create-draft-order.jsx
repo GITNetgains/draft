@@ -129,7 +129,15 @@ export async function action({ request }) {
             edges {
               node {
                 title quantity
-                variant { id title image { url } }
+               variant { 
+  id 
+  title 
+  image { url }
+  product {
+    featuredImage { url }
+  }
+}
+
                 originalUnitPriceSet { shopMoney { amount currencyCode } }
               }
             }
@@ -244,7 +252,11 @@ async function sendEmailAsync(customer, order, shop) {
     order.lineItems.edges.forEach(({ node }) => {
       const price = parseFloat(node.originalUnitPriceSet.shopMoney.amount);
       const lineTotal = price * node.quantity;
-      const img = node.variant?.image?.url || "https://via.placeholder.com/80";
+      const img =
+  node.variant?.image?.url ||
+  node.variant?.product?.featuredImage?.url ||
+  "https://via.placeholder.com/80";
+
 
       itemsHtml += `
         <div style="display:flex; gap:16px; padding:12px 0; border-bottom:1px solid #eee;">
