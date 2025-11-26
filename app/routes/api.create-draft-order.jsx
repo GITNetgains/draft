@@ -11,14 +11,14 @@ let emailTransporter = null;
 function getEmailTransporter() {
   if (!emailTransporter && process.env.SMTP_USER && process.env.SMTP_PASS) {
     emailTransporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
+      host: "smtp.netgains.org",
+      port: 465,
+      secure: true,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      pool: true,
+      pool: true, 
       maxConnections: 5,
       maxMessages: 100,
     });
@@ -90,6 +90,10 @@ export async function action({ request }) {
   const lineItems = cart.items.map((item) => ({
     quantity: item.quantity,
     variantId: `gid://shopify/ProductVariant/${item.variant_id}`,
+    priceOverride: {
+    amount: item.final_price / 100,  
+    currencyCode: cart.currency
+  }
   }));
 
   const shippingAddress = {
@@ -107,44 +111,45 @@ export async function action({ request }) {
   const billingAddressInput = useShipping
     ? shippingAddress
     : {
-      firstName: customer?.first_name || "",
-      lastName: customer?.last_name || "",
-      address1: billingAddress?.address1 || "",
-      address2: billingAddress?.apartment || "",
-      city: billingAddress?.city || "",
-      province: billingAddress?.state || "",
-      country: billingAddress?.country || "",
-      zip: billingAddress?.pin || "",
-      company: billingAddress?.company || "",
-    };
+        firstName: customer?.first_name || "",
+        lastName: customer?.last_name || "",
+        address1: billingAddress?.address1 || "",
+        address2: billingAddress?.apartment || "",
+        city: billingAddress?.city || "",
+        province: billingAddress?.state || "",
+        country: billingAddress?.country || "",
+        zip: billingAddress?.pin || "",
+        company: billingAddress?.company || "",
+      };
 
   const draftOrderMutation = `
     mutation draftOrderCreate($input: DraftOrderInput!) {
-  draftOrderCreate(input: $input) {
-    draftOrder {
-      id
-      totalPriceSet { shopMoney { amount currencyCode } }
-      lineItems(first: 250) {
-        edges {
-          node {
-            quantity
-            approximateDiscountedUnitPriceSet { shopMoney { amount currencyCode } }
-            discountedTotalSet { shopMoney { amount currencyCode } }
-            variant {
-              id
-              title
-              image { url }
-              product { featuredImage { url } }
-            }
-            name
-          }
-        }
-      }
-    }
-    userErrors { field message }
+      draftOrderCreate(input: $input) {
+        draftOrder {
+          id name invoiceUrl createdAt
+          totalPriceSet { shopMoney { amount currencyCode } }
+          customer { id email firstName lastName }
+          lineItems(first: 250) {
+            edges {
+              node {
+                title quantity
+               variant { 
+  id 
+  title 
+  image { url }
+  product {
+    featuredImage { url }
   }
 }
 
+                originalUnitPriceSet { shopMoney { amount currencyCode } }
+              }
+            }
+          }
+        }
+        userErrors { field message }
+      }
+    }
   `;
 
   const createDraft = async (discount = 0, label = "Discount", tag = "") => {
@@ -158,8 +163,8 @@ export async function action({ request }) {
       ...(customer?.id
         ? { customerId: `gid://shopify/Customer/${customer.id}` }
         : customer?.email
-          ? { email: customer.email }
-          : {}),
+        ? { email: customer.email }
+        : {}),
       ...(discount > 0 && {
         appliedDiscount: {
           title: label,
@@ -188,30 +193,30 @@ export async function action({ request }) {
 
   try {
     let createdOrders = [];
-
+    
     // Check if double draft orders are enabled
     if (setting.doubleDraftOrdersEnabled && setting.discount1 > 0 && setting.discount2 > 0) {
       // Create TWO draft orders in PARALLEL (faster)
       console.log("Creating DOUBLE draft orders with discounts:", setting.discount1, setting.discount2);
-
+      
       const [order1, order2] = await Promise.all([
         createDraft(setting.discount1, "PAYNOW40", setting.tag1 || ""),
         createDraft(setting.discount2, "FINAL60", setting.tag2 || "")
       ]);
-
+      
       createdOrders.push(order1, order2);
       console.log("Two draft orders created successfully");
-
+      
     } else {
       // Create SINGLE draft order
       console.log("Creating SINGLE draft order with discount:", setting.singleDiscount);
-
+      
       const order = await createDraft(
-        setting.singleDiscount || 0,
-        "Your Discount",
+        setting.singleDiscount || 0, 
+        "Your Discount", 
         setting.singleTag || ""
       );
-
+      
       createdOrders.push(order);
       console.log("Single draft order created successfully");
     }
@@ -228,8 +233,8 @@ export async function action({ request }) {
 
     // Return immediately without waiting for email
     return json(
-      {
-        success: true,
+      { 
+        success: true, 
         drafts: createdOrders,
         emailQueued: !!(customer?.email && process.env.SMTP_USER && process.env.SMTP_PASS)
       },
@@ -248,36 +253,34 @@ async function sendEmailAsync(customer, order, shop) {
     if (!transporter) return;
 
     let itemsHtml = "";
-  order.lineItems.edges.forEach(({ node }) => {
-  const unitPrice = parseFloat(node.approximateDiscountedUnitPriceSet.shopMoney.amount);
-  const lineTotal = parseFloat(node.discountedTotalSet.shopMoney.amount);
-  const currency = node.approximateDiscountedUnitPriceSet.shopMoney.currencyCode;
-
+    order.lineItems.edges.forEach(({ node }) => {
+      const price = parseFloat(node.originalUnitPriceSet.shopMoney.amount);
+      const lineTotal = price * node.quantity;
       const img =
-        node.variant?.image?.url ||
-        node.variant?.product?.featuredImage?.url ||
-        "https://via.placeholder.com/80";
+  node.variant?.image?.url ||
+  node.variant?.product?.featuredImage?.url ||
+  "https://via.placeholder.com/80";
+
 
       itemsHtml += `
         <div style="display:flex; gap:16px; padding:12px 0; border-bottom:1px solid #eee;">
           <img src="${img}" width="60" height="60" style="object-fit:cover; border-radius:6px;">
           <div style="flex:1;">
             <div style="font-weight:600;">${node.title}</div>
-            ${
-              node.variant?.title && node.variant.title !== "Default Title"
-                ? `<div style="color:#666; font-size:14px;">${node.variant.title}</div>`
-                : ""
-            }
+            ${node.variant?.title !== "Default Title" ? `<div style="color:#666; font-size:14px;">${node.variant.title}</div>` : ""}
             <div style="color:#666; margin-top:4px;">Qty: ${node.quantity}</div>
-            <div style="color:#666; margin-top:4px; font-size:14px;">Unit Price: ${currency} ${unitPrice.toFixed(2)}</div>
           </div>
-          <div style="font-weight:600;">${currency} ${lineTotal.toFixed(2)}</div>
+          <div style="font-weight:600;">${node.originalUnitPriceSet.shopMoney.currencyCode} ${lineTotal.toFixed(2)}</div>
         </div>`;
     });
 
     const currency = order.totalPriceSet.shopMoney.currencyCode;
     const orderTotal = parseFloat(order.totalPriceSet.shopMoney.amount).toFixed(2);
-    const shopName = shop.split(".")[0];
+  const shopName = shop
+  .replace(/^https?:\/\//, "")   // remove http/https if included
+  .replace(/^www\./, "")         // remove www.
+  .replace(/\.myshopify\.com$/, "") // remove .myshopify.com
+  .replace(/\.[^.]+$/, "");   
 
     const html = `
       <!DOCTYPE html>
@@ -288,6 +291,7 @@ async function sendEmailAsync(customer, order, shop) {
       </head>
       <body style="margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f5f5f5;">
         <div style="max-width:600px; margin:0 auto; background:#fff; padding:32px;">
+          
           <div style="text-align:center; margin-bottom:24px;">
             <h1 style="margin:0; font-size:24px; color:#333;">Your Order is Ready!</h1>
             <p style="color:#666; margin-top:8px;">Order ${order.name}</p>

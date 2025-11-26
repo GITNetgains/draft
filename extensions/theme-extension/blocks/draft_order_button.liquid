@@ -1,423 +1,423 @@
-<!-- Custom Draft Order Button + Modal -->
-<script id="x-draft-data-hub" type="application/json">
-{
- 
-  "customer": {
-    "id": {{ customer.id | json }},
-    "email": {{ customer.email | json }},
-    "first_name": {{ customer.first_name | json }},
-    "last_name": {{ customer.last_name | json }}
+  <!-- Custom Draft Order Button + Modal -->
+  <script id="x-draft-data-hub" type="application/json">
+  {
+  
+    "customer": {
+      "id": {{ customer.id | json }},
+      "email": {{ customer.email | json }},
+      "first_name": {{ customer.first_name | json }},
+      "last_name": {{ customer.last_name | json }}
+    }
   }
-}
-</script>
+  </script>
 
-{% if template.name == 'cart' %}
-  {% if cart.item_count == 0 %}
-    <p style="text-align: center; margin: 20px 0; font-size: 16px; color: #555;">
-      <a href="/collections/all" style="color: #4f5051; text-decoration: none;">
-        Start adding your favorite items!
-      </a>
-    </p>
-  {% else %}
-    <div class="page-width" id="main" style="display:flex; justify-content: {{ block.settings.alignment | default: 'flex-end' }};">
-      <button
-        id="create-x-draft-order"
-        class="x-draft-main-btn"
-        style="
-          background-color: {{ block.settings.background_color | default: '#070707ff' }};
-          color: {{ block.settings.text_color | default: '#ffffff' }};
-          padding: 14px 24px;
-          border: none;
-          border-radius: 8px;
-          font-size: 15px;
-          font-weight: 600;
-          cursor: pointer;
-          width: 100%;
-          max-width: 380px;
-          white-space: nowrap;
-          margin: 20px auto;
-          transition: all 0.2s ease;
-        "
-        onmouseover="this.style.opacity='0.9'"
-        onmouseout="this.style.opacity='1'"
-      >
-        {{ block.settings.text | default: "Partial Payment(40/60)" | escape }}
-      </button>
-        <p style="text-align: center; margin: 20px 0; font-size: 16px; color: #555;">
-        {{ block.settings.para | default: "Partial Payment(40/60)" | escape }}
-        </p>
-    </div>
+  {% if template.name == 'cart' %}
+    {% if cart.item_count == 0 %}
+      <p style="text-align: center; margin: 20px 0; font-size: 16px; color: #555;">
+        <a href="/collections/all" style="color: #4f5051; text-decoration: none;">
+          Start adding your favorite items!
+        </a>
+      </p>
+    {% else %}
+      <div class="page-width" id="main" style="display:flex; justify-content: {{ block.settings.alignment | default: 'flex-end' }};">
+        <button
+          id="create-x-draft-order"
+          class="x-draft-main-btn"
+          style="
+            background-color: {{ block.settings.background_color | default: '#070707ff' }};
+            color: {{ block.settings.text_color | default: '#ffffff' }};
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            max-width: 380px;
+            white-space: nowrap;
+            margin: 20px auto;
+            transition: all 0.2s ease;
+          "
+          onmouseover="this.style.opacity='0.9'"
+          onmouseout="this.style.opacity='1'"
+        >
+          {{ block.settings.text | default: "Partial Payment(40/60)" | escape }}
+        </button>
+          <p style="text-align: center; margin: 20px 0; font-size: 16px; color: #555;">
+          {{ block.settings.para | default: "Partial Payment(40/60)" | escape }}
+          </p>
+      </div>
+    {% endif %}
   {% endif %}
-{% endif %}
 
-<!-- Fullscreen Modal -->
-<div id="x-modal-container" style="display:none;position:fixed;inset:0;width:100vw;height:100vh;z-index:99999;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);justify-content:center;align-items:center;">
-  <div style="background:#fff;padding:24px;border-radius:12px;width:100%;max-width:600px;box-shadow:0 0 0 1px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.2);position:relative;overflow-y:auto;max-height:90vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-    <button id="x-close-modal-btn" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:24px;cursor:pointer;">×</button>
-    <h2 style="margin-bottom:20px;font-size:20px;">Shipping address</h2>
+  <!-- Fullscreen Modal -->
+  <div id="x-modal-container" style="display:none;position:fixed;inset:0;width:100vw;height:100vh;z-index:99999;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);justify-content:center;align-items:center;">
+    <div style="background:#fff;padding:24px;border-radius:12px;width:100%;max-width:600px;box-shadow:0 0 0 1px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.2);position:relative;overflow-y:auto;max-height:90vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+      <button id="x-close-modal-btn" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:24px;cursor:pointer;">×</button>
+      <h2 style="margin-bottom:20px;font-size:20px;">Shipping address</h2>
 
-    <div style="display:flex;flex-wrap:wrap;gap:16px;">
-      <div style="flex:1 1 100%;">
-        <label>Country</label>
-        <select id="x-ship-country" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;"><option value="">Select country</option></select>
-        <div class="x-error-text" id="x-err-country"></div>
-      </div>
-      <div style="flex:1 1 100%;">
-        <label>Company</label>
-        <input id="x-ship-company" type="text" placeholder="Optional" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-      </div>
-      <div style="flex:1 1 100%;">
-        <label>Address</label>
-        <input id="x-ship-addr1" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-        <div class="x-error-text" id="x-err-addr1"></div>
-      </div>
-      <div style="flex:1 1 100%;">
-        <label>Apartment / Suite</label>
-        <input id="x-ship-apt" type="text" placeholder="Optional" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-      </div>
-      <div style="flex:1 1 48%;">
-        <label>City</label>
-        <input id="x-ship-city" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-        <div class="x-error-text" id="x-err-city"></div>
-      </div>
-      <div style="flex:1 1 48%;">
-        <label>State</label>
-        <select id="x-ship-state" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;"><option value="">Select state</option></select>
-        <div class="x-error-text" id="x-err-state"></div>
-      </div>
-      <div style="flex:1 1 100%;">
-        <label>PIN code</label>
-        <input id="x-ship-pin" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-        <div class="x-error-text" id="x-err-pin"></div>
-      </div>
-    </div>
-
-    <label style="display:flex;align-items:center;gap:10px;margin-top:20px;">
-      <input type="checkbox" id="x-same-billing-chk" checked />
-      Billing address is same as shipping address
-    </label>
-
-    <div id="x-billing-section" style="display:none;margin-top:20px;border-top:1px solid #ccc;padding-top:20px;">
-      <h3 style="margin-bottom:10px;">Billing Address</h3>
       <div style="display:flex;flex-wrap:wrap;gap:16px;">
         <div style="flex:1 1 100%;">
           <label>Country</label>
-          <select id="x-bill-country" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;"><option value="">Select country</option></select>
-          <div class="x-error-text" id="x-err-bill-country"></div>
-        </div>
-        <div style="flex:1 1 48%;">
-          <label>City</label>
-          <input id="x-bill-city" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-          <div class="x-error-text" id="x-err-bill-city"></div>
-        </div>
-        <div style="flex:1 1 48%;">
-          <label>State</label>
-          <select id="x-bill-state" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;"><option value="">Select state</option></select>
-          <div class="x-error-text" id="x-err-bill-state"></div>
+          <select id="x-ship-country" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;"><option value="">Select country</option></select>
+          <div class="x-error-text" id="x-err-country"></div>
         </div>
         <div style="flex:1 1 100%;">
           <label>Company</label>
-          <input id="x-bill-company" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
+          <input id="x-ship-company" type="text" placeholder="Optional" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
         </div>
         <div style="flex:1 1 100%;">
           <label>Address</label>
-          <input id="x-bill-addr1" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-          <div class="x-error-text" id="x-err-bill-addr1"></div>
+          <input id="x-ship-addr1" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
+          <div class="x-error-text" id="x-err-addr1"></div>
         </div>
         <div style="flex:1 1 100%;">
           <label>Apartment / Suite</label>
-          <input id="x-bill-apt" type="text" placeholder="Optional" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
+          <input id="x-ship-apt" type="text" placeholder="Optional" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
+        </div>
+        <div style="flex:1 1 48%;">
+          <label>City</label>
+          <input id="x-ship-city" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
+          <div class="x-error-text" id="x-err-city"></div>
+        </div>
+        <div style="flex:1 1 48%;">
+          <label>State</label>
+          <select id="x-ship-state" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;"><option value="">Select state</option></select>
+          <div class="x-error-text" id="x-err-state"></div>
         </div>
         <div style="flex:1 1 100%;">
           <label>PIN code</label>
-          <input id="x-bill-pin" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-          <div class="x-error-text" id="x-err-bill-pin"></div>
+          <input id="x-ship-pin" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
+          <div class="x-error-text" id="x-err-pin"></div>
         </div>
       </div>
+
+      <label style="display:flex;align-items:center;gap:10px;margin-top:20px;">
+        <input type="checkbox" id="x-same-billing-chk" checked />
+        Billing address is same as shipping address
+      </label>
+
+      <div id="x-billing-section" style="display:none;margin-top:20px;border-top:1px solid #ccc;padding-top:20px;">
+        <h3 style="margin-bottom:10px;">Billing Address</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:16px;">
+          <div style="flex:1 1 100%;">
+            <label>Country</label>
+            <select id="x-bill-country" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;"><option value="">Select country</option></select>
+            <div class="x-error-text" id="x-err-bill-country"></div>
+          </div>
+          <div style="flex:1 1 48%;">
+            <label>City</label>
+            <input id="x-bill-city" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
+            <div class="x-error-text" id="x-err-bill-city"></div>
+          </div>
+          <div style="flex:1 1 48%;">
+            <label>State</label>
+            <select id="x-bill-state" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;"><option value="">Select state</option></select>
+            <div class="x-error-text" id="x-err-bill-state"></div>
+          </div>
+          <div style="flex:1 1 100%;">
+            <label>Company</label>
+            <input id="x-bill-company" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
+          </div>
+          <div style="flex:1 1 100%;">
+            <label>Address</label>
+            <input id="x-bill-addr1" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
+            <div class="x-error-text" id="x-err-bill-addr1"></div>
+          </div>
+          <div style="flex:1 1 100%;">
+            <label>Apartment / Suite</label>
+            <input id="x-bill-apt" type="text" placeholder="Optional" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
+          </div>
+          <div style="flex:1 1 100%;">
+            <label>PIN code</label>
+            <input id="x-bill-pin" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
+            <div class="x-error-text" id="x-err-bill-pin"></div>
+          </div>
+        </div>
+      </div>
+
+      <button id="x-submit-draft-btn" style="background-color:{{ block.settings.background_color | default: '#070707ff' }};color:{{ block.settings.text_color | default: '#ffffff' }};padding:12px;width:100%;border:none;border-radius:6px;font-size:16px;margin-top:24px;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:8px;">
+        <span id="x-submit-text">Submit</span>
+        <svg id="x-submit-spinner" xmlns="http://www.w3.org/2000/svg" style="display:none;" width="20" height="20" viewBox="0 0 50 50">
+          <circle cx="25" cy="25" r="20" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="30 150" />
+        </svg>
+      </button>
     </div>
-
-    <button id="x-submit-draft-btn" style="background-color:{{ block.settings.background_color | default: '#070707ff' }};color:{{ block.settings.text_color | default: '#ffffff' }};padding:12px;width:100%;border:none;border-radius:6px;font-size:16px;margin-top:24px;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:8px;">
-      <span id="x-submit-text">Submit</span>
-      <svg id="x-submit-spinner" xmlns="http://www.w3.org/2000/svg" style="display:none;" width="20" height="20" viewBox="0 0 50 50">
-        <circle cx="25" cy="25" r="20" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="30 150" />
-      </svg>
-    </button>
   </div>
-</div>
 
-<style>
-  .x-error-text {color:#d32f2f;font-size:13px;margin-top:4px;}
-  .x-draft-main-btn {display:block;width:100%;text-align:center;padding:14px;font-size:14px;font-weight:200;border:none;cursor:pointer;transition:all .2s ease;}
-  @keyframes x-spin {from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-</style>
+  <style>
+    .x-error-text {color:#d32f2f;font-size:13px;margin-top:4px;}
+    .x-draft-main-btn {display:block;width:100%;text-align:center;padding:14px;font-size:14px;font-weight:200;border:none;cursor:pointer;transition:all .2s ease;}
+    @keyframes x-spin {from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  </style>
 
-<script>
-(function(){
-  const draftData = JSON.parse(document.getElementById('x-draft-data-hub').textContent);
-  
-  let toastHolder = document.createElement('div');
-  toastHolder.id = 'x-toast-holder';
-  toastHolder.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:1000000;display:flex;flex-direction:column;gap:10px;max-width:300px;width:100%;pointer-events:none;align-items:center;';
-  document.body.appendChild(toastHolder);
-
-  function showToast(msg, dur = 7000) {
-    const t = document.createElement('div');
-    t.style.cssText = 'background:rgba(0,0,0,0.8);color:white;padding:12px 20px;border-radius:6px;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,0.3);opacity:0;transition:opacity .3s;pointer-events:auto;';
-    t.textContent = msg;
-    toastHolder.appendChild(t);
-    requestAnimationFrame(() => { t.style.opacity = '1'; });
-    setTimeout(() => { t.style.opacity = '0'; t.addEventListener('transitionend', () => t.remove()); }, dur);
-  }
-
- async function loadCountries(selectId, stateId) {
-  const countrySelect = document.getElementById(selectId);
-  const stateSelect = document.getElementById(stateId);
-
-  try {
-    // Load countries_full.json locally from Shopify assets
-    const res = await fetch('{{ "countries_full.json" | asset_url }}');
-    const data = await res.json();
-
-    const countries = data.data || data; // supports both structures
-
-    // Fill country dropdown
-    countries.forEach(c => {
-      countrySelect.add(new Option(c.name, c.name));
-    });
-
-    // When country changes → load states
-    countrySelect.addEventListener('change', () => {
-      const selected = countries.find(c => c.name === countrySelect.value);
-
-      stateSelect.innerHTML = '<option value="">Select state</option>';
-
-      if (selected?.states?.length) {
-        selected.states.forEach(state => {
-          stateSelect.add(new Option(state, state));
-        });
-      }
-    });
-  } catch (e) {
-    console.error("Error loading countries_full.json", e);
-  }
-}
-
-
-  // Improved cart fetching with rate limit protection
-  let cartCache = null;
-  let lastCartFetch = 0;
-  const CART_FETCH_COOLDOWN = 2000;
-  let cartFetchPromise = null;
-
-  async function getCart() {
-    const now = Date.now();
+  <script>
+  (function(){
+    const draftData = JSON.parse(document.getElementById('x-draft-data-hub').textContent);
     
-    if (cartCache && (now - lastCartFetch) < CART_FETCH_COOLDOWN) {
-      return cartCache;
+    let toastHolder = document.createElement('div');
+    toastHolder.id = 'x-toast-holder';
+    toastHolder.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:1000000;display:flex;flex-direction:column;gap:10px;max-width:300px;width:100%;pointer-events:none;align-items:center;';
+    document.body.appendChild(toastHolder);
+
+    function showToast(msg, dur = 7000) {
+      const t = document.createElement('div');
+      t.style.cssText = 'background:rgba(0,0,0,0.8);color:white;padding:12px 20px;border-radius:6px;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,0.3);opacity:0;transition:opacity .3s;pointer-events:auto;';
+      t.textContent = msg;
+      toastHolder.appendChild(t);
+      requestAnimationFrame(() => { t.style.opacity = '1'; });
+      setTimeout(() => { t.style.opacity = '0'; t.addEventListener('transitionend', () => t.remove()); }, dur);
     }
-    
-    if (cartFetchPromise) {
+
+  async function loadCountries(selectId, stateId) {
+    const countrySelect = document.getElementById(selectId);
+    const stateSelect = document.getElementById(stateId);
+
+    try {
+      // Load countries_full.json locally from Shopify assets
+      const res = await fetch('{{ "countries_full.json" | asset_url }}');
+      const data = await res.json();
+
+      const countries = data.data || data; // supports both structures
+
+      // Fill country dropdown
+      countries.forEach(c => {
+        countrySelect.add(new Option(c.name, c.name));
+      });
+
+      // When country changes → load states
+      countrySelect.addEventListener('change', () => {
+        const selected = countries.find(c => c.name === countrySelect.value);
+
+        stateSelect.innerHTML = '<option value="">Select state</option>';
+
+        if (selected?.states?.length) {
+          selected.states.forEach(state => {
+            stateSelect.add(new Option(state, state));
+          });
+        }
+      });
+    } catch (e) {
+      console.error("Error loading countries_full.json", e);
+    }
+  }
+
+
+    // Improved cart fetching with rate limit protection
+    let cartCache = null;
+    let lastCartFetch = 0;
+    const CART_FETCH_COOLDOWN = 2000;
+    let cartFetchPromise = null;
+
+    async function getCart() {
+      const now = Date.now();
+      
+      if (cartCache && (now - lastCartFetch) < CART_FETCH_COOLDOWN) {
+        return cartCache;
+      }
+      
+      if (cartFetchPromise) {
+        return cartFetchPromise;
+      }
+      
+      cartFetchPromise = (async () => {
+        try {
+          const res = await fetch('/cart.js');
+          
+          if (!res.ok) {
+            console.warn('Cart fetch failed with status:', res.status);
+            return cartCache || { items: [] };
+          }
+          
+          const text = await res.text();
+          
+          if (text.trim().startsWith('<')) {
+            console.warn('HTML returned instead of JSON (likely rate limit)');
+            return cartCache || { items: [] };
+          }
+          
+          const cart = JSON.parse(text);
+          cartCache = cart;
+          lastCartFetch = Date.now();
+          return cart;
+          
+        } catch (err) {
+          console.error('Cart fetch error', err);
+          return cartCache || { items: [] };
+        } finally {
+          cartFetchPromise = null;
+        }
+      })();
+      
       return cartFetchPromise;
     }
-    
-    cartFetchPromise = (async () => {
-      try {
-        const res = await fetch('/cart.js');
-        
-        if (!res.ok) {
-          console.warn('Cart fetch failed with status:', res.status);
-          return cartCache || { items: [] };
-        }
-        
-        const text = await res.text();
-        
-        if (text.trim().startsWith('<')) {
-          console.warn('HTML returned instead of JSON (likely rate limit)');
-          return cartCache || { items: [] };
-        }
-        
-        const cart = JSON.parse(text);
-        cartCache = cart;
-        lastCartFetch = Date.now();
-        return cart;
-        
-      } catch (err) {
-        console.error('Cart fetch error', err);
-        return cartCache || { items: [] };
-      } finally {
-        cartFetchPromise = null;
-      }
-    })();
-    
-    return cartFetchPromise;
-  }
 
-  function clearErrors(fields) {
-    fields.forEach(f => {
-      const e = document.getElementById('x-err-' + f.id.split('-').pop());
-      if (e) e.textContent = '';
-    });
-  }
-
-  function initXDraft() {
-    const modal = document.getElementById('x-modal-container');
-    const closeBtn = document.getElementById('x-close-modal-btn');
-    const submitBtn = document.getElementById('x-submit-draft-btn');
-    const submitTxt = document.getElementById('x-submit-text');
-    const spinner = document.getElementById('x-submit-spinner');
-
-    async function openModal(e) {
-      e.preventDefault();
-      if (!draftData.customer?.email) { showToast("Please log in as a customer."); return; }
-      const cart = await getCart();
-      if (cart.items.length === 0) { showToast("Your cart is empty."); return; }
-      modal.style.display = 'flex';
-    }
-
-    document.querySelectorAll('#create-x-draft-order, .create-x-draft-order').forEach(b => b.addEventListener('click', openModal));
-
-    document.addEventListener('DOMContentLoaded', () => {
-      document.body.appendChild(modal);
-      loadCountries('x-ship-country', 'x-ship-state');
-      loadCountries('x-bill-country', 'x-bill-state');
-      document.getElementById('x-same-billing-chk').addEventListener('change', e => {
-        document.getElementById('x-billing-section').style.display = e.target.checked ? 'none' : 'block';
+    function clearErrors(fields) {
+      fields.forEach(f => {
+        const e = document.getElementById('x-err-' + f.id.split('-').pop());
+        if (e) e.textContent = '';
       });
-    });
-
-    closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
-
-    submitBtn.addEventListener('click', async () => {
-      
-      const required = [
-        { id: 'x-ship-country', name: 'Country' },
-        { id: 'x-ship-addr1', name: 'Address' },
-        { id: 'x-ship-city', name: 'City' },
-        { id: 'x-ship-state', name: 'State' },
-        { id: 'x-ship-pin', name: 'PIN code' }
-      ];
-      
-      if (!document.getElementById('x-same-billing-chk').checked) {
-        required.push(
-          { id: 'x-bill-country', name: 'Billing Country' },
-          { id: 'x-bill-addr1', name: 'Billing Address' },
-          { id: 'x-bill-city', name: 'Billing City' },
-          { id: 'x-bill-state', name: 'Billing State' },
-          { id: 'x-bill-pin', name: 'Billing PIN' }
-        );
-      }
-      
-      clearErrors(required);
-      
-      for (const f of required) {
-        const el = document.getElementById(f.id);
-        if (!el?.value.trim()) {
-          const errEl = document.getElementById('x-err-' + f.id.split('-').pop());
-          if (errEl) {
-            errEl.textContent = f.name + ' is required';
-            el?.focus();
-          }
-          return;
-        }
-      }
-
-      submitBtn.disabled = true;
-      submitTxt.style.display = 'none';
-      spinner.style.display = 'inline-block';
-      spinner.style.animation = 'x-spin 1s linear infinite';
-
-      const shipping = {
-        address1: document.getElementById('x-ship-addr1').value,
-        apartment: document.getElementById('x-ship-apt').value || '',
-        city: document.getElementById('x-ship-city').value,
-        state: document.getElementById('x-ship-state').value,
-        pin: document.getElementById('x-ship-pin').value,
-        company: document.getElementById('x-ship-company').value || '',
-        country: document.getElementById('x-ship-country').value
-      };
-      
-      const billing = document.getElementById('x-same-billing-chk').checked ? shipping : {
-        address1: document.getElementById('x-bill-addr1').value,
-        apartment: document.getElementById('x-bill-apt').value || '',
-        city: document.getElementById('x-bill-city').value,
-        state: document.getElementById('x-bill-state').value,
-        pin: document.getElementById('x-bill-pin').value,
-        company: document.getElementById('x-bill-company').value || '',
-        country: document.getElementById('x-bill-country').value
-      };
-
-      const cart = await getCart();
-      
-      try {
-        const res = await fetch('https://draft-lyart.vercel.app/api/create-draft-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            customer: draftData.customer,
-            cart,
-            address: shipping,
-            billingAddress: billing,
-            discount: cart.discount_codes?.[0] || null,
-          
-            useShipping: document.getElementById('x-same-billing-chk').checked
-          })
-        });
-        
-        const json = await res.json();
-        
-        if (json.success) {
-          await fetch('/cart/clear.js', { method: 'POST' });
-          showToast("Draft order created successfully!");
-          setTimeout(() => location.reload(), 1500);
-        } else {
-          showToast("Error: " + json.error);
-        }
-      } catch (err) {
-        showToast("Network error. Try again.");
-        console.error(err);
-      } finally {
-        submitBtn.disabled = false;
-        submitTxt.style.display = 'inline';
-        spinner.style.display = 'none';
-        spinner.style.animation = '';
-        modal.style.display = 'none';
-      }
-    });
-  }
-
-  initXDraft();
-})();
-</script>
-
-{% schema %}
-{
-  "name": "Custom Draft Button",
-  "target": "section",
-  "settings": [
-    {
-      "type": "text",
-      "id": "text",
-      "label": "Button Text",
-      "default": "Create Draft Order"
-    },
-    {
-      "type": "text",
-      "id": "para",
-      "label": "line Text",
-      "default": "pay 40% now and 60% later"
-    },
-    {
-      "type": "color",
-      "id": "background_color",
-      "label": "Background Color",
-      "default": "#070707"
-    },
-    {
-      "type": "color",
-      "id": "text_color",
-      "label": "Text Color",
-      "default": "#ffffff"
     }
-  ]
-}
-{% endschema %}
+
+    function initXDraft() {
+      const modal = document.getElementById('x-modal-container');
+      const closeBtn = document.getElementById('x-close-modal-btn');
+      const submitBtn = document.getElementById('x-submit-draft-btn');
+      const submitTxt = document.getElementById('x-submit-text');
+      const spinner = document.getElementById('x-submit-spinner');
+
+      async function openModal(e) {
+        e.preventDefault();
+        if (!draftData.customer?.email) { showToast("Please log in as a customer."); return; }
+        const cart = await getCart();
+        if (cart.items.length === 0) { showToast("Your cart is empty."); return; }
+        modal.style.display = 'flex';
+      }
+
+      document.querySelectorAll('#create-x-draft-order, .create-x-draft-order').forEach(b => b.addEventListener('click', openModal));
+
+      document.addEventListener('DOMContentLoaded', () => {
+        document.body.appendChild(modal);
+        loadCountries('x-ship-country', 'x-ship-state');
+        loadCountries('x-bill-country', 'x-bill-state');
+        document.getElementById('x-same-billing-chk').addEventListener('change', e => {
+          document.getElementById('x-billing-section').style.display = e.target.checked ? 'none' : 'block';
+        });
+      });
+
+      closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+
+      submitBtn.addEventListener('click', async () => {
+        
+        const required = [
+          { id: 'x-ship-country', name: 'Country' },
+          { id: 'x-ship-addr1', name: 'Address' },
+          { id: 'x-ship-city', name: 'City' },
+          { id: 'x-ship-state', name: 'State' },
+          { id: 'x-ship-pin', name: 'PIN code' }
+        ];
+        
+        if (!document.getElementById('x-same-billing-chk').checked) {
+          required.push(
+            { id: 'x-bill-country', name: 'Billing Country' },
+            { id: 'x-bill-addr1', name: 'Billing Address' },
+            { id: 'x-bill-city', name: 'Billing City' },
+            { id: 'x-bill-state', name: 'Billing State' },
+            { id: 'x-bill-pin', name: 'Billing PIN' }
+          );
+        }
+        
+        clearErrors(required);
+        
+        for (const f of required) {
+          const el = document.getElementById(f.id);
+          if (!el?.value.trim()) {
+            const errEl = document.getElementById('x-err-' + f.id.split('-').pop());
+            if (errEl) {
+              errEl.textContent = f.name + ' is required';
+              el?.focus();
+            }
+            return;
+          }
+        }
+
+        submitBtn.disabled = true;
+        submitTxt.style.display = 'none';
+        spinner.style.display = 'inline-block';
+        spinner.style.animation = 'x-spin 1s linear infinite';
+
+        const shipping = {
+          address1: document.getElementById('x-ship-addr1').value,
+          apartment: document.getElementById('x-ship-apt').value || '',
+          city: document.getElementById('x-ship-city').value,
+          state: document.getElementById('x-ship-state').value,
+          pin: document.getElementById('x-ship-pin').value,
+          company: document.getElementById('x-ship-company').value || '',
+          country: document.getElementById('x-ship-country').value
+        };
+        
+        const billing = document.getElementById('x-same-billing-chk').checked ? shipping : {
+          address1: document.getElementById('x-bill-addr1').value,
+          apartment: document.getElementById('x-bill-apt').value || '',
+          city: document.getElementById('x-bill-city').value,
+          state: document.getElementById('x-bill-state').value,
+          pin: document.getElementById('x-bill-pin').value,
+          company: document.getElementById('x-bill-company').value || '',
+          country: document.getElementById('x-bill-country').value
+        };
+
+        const cart = await getCart();
+        
+        try {
+          const res = await fetch('https://draft-lyart.vercel.app/api/create-draft-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              customer: draftData.customer,
+              cart,
+              address: shipping,
+              billingAddress: billing,
+              discount: cart.discount_codes?.[0] || null,
+            
+              useShipping: document.getElementById('x-same-billing-chk').checked
+            })
+          });
+          
+          const json = await res.json();
+          
+          if (json.success) {
+            await fetch('/cart/clear.js', { method: 'POST' });
+            showToast("Draft order created successfully!");
+            setTimeout(() => location.reload(), 1500);
+          } else {
+            showToast("Error: " + json.error);
+          }
+        } catch (err) {
+          showToast("Network error. Try again.");
+          console.error(err);
+        } finally {
+          submitBtn.disabled = false;
+          submitTxt.style.display = 'inline';
+          spinner.style.display = 'none';
+          spinner.style.animation = '';
+          modal.style.display = 'none';
+        }
+      });
+    }
+
+    initXDraft();
+  })();
+  </script>
+
+  {% schema %}
+  {
+    "name": "Custom Draft Button",
+    "target": "section",
+    "settings": [
+      {
+        "type": "text",
+        "id": "text",
+        "label": "Button Text",
+        "default": "Create Draft Order"
+      },
+      {
+        "type": "text",
+        "id": "para",
+        "label": "line Text",
+        "default": "pay 40% now and 60% later"
+      },
+      {
+        "type": "color",
+        "id": "background_color",
+        "label": "Background Color",
+        "default": "#070707"
+      },
+      {
+        "type": "color",
+        "id": "text_color",
+        "label": "Text Color",
+        "default": "#ffffff"
+      }
+    ]
+  }
+  {% endschema %}
