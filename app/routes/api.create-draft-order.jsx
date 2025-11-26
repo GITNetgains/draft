@@ -6,7 +6,7 @@ import nodemailer from "nodemailer";
 const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN;
 const SHOPIFY_ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
 
-// Reusable SMTP transporter (connection pooling)
+
 let emailTransporter = null;
 function getEmailTransporter() {
   if (!emailTransporter && process.env.SMTP_USER && process.env.SMTP_PASS) {
@@ -59,17 +59,6 @@ export async function action({ request }) {
   const { customer, cart, address, billingAddress, useShipping } = body;
   if (!cart?.items?.length) return sendError(request, "Cart is empty", 400);
 
-  // Log cart for debugging
-  console.log("Cart data:", JSON.stringify(cart, null, 2));
-  console.log("Cart items:", cart.items.map(item => ({
-    title: item.title,
-    original_price: item.original_price,
-    final_price: item.final_price,
-    original_line_price: item.original_line_price,
-    final_line_price: item.final_line_price,
-    has_discount: item.final_line_price < item.original_line_price
-  })));
-
   const shop = SHOPIFY_STORE_DOMAIN;
   const accessToken = SHOPIFY_ADMIN_TOKEN;
 
@@ -98,61 +87,10 @@ export async function action({ request }) {
     "X-Shopify-Access-Token": accessToken,
   };
 
-  // Map line items and use wholesale prices if available
-  const lineItems = [];
-  const itemNotes = [];
-  
-  cart.items.forEach((item) => {
-    const lineItem = {
-      quantity: item.quantity,
-      variantId: `gid://shopify/ProductVariant/${item.variant_id}`,
-    };
-
-    // Use wholesale price if available (from Samita app)
-    if (item.wholesale_price && item.wholesale_price !== item.price) {
-      const wholesalePrice = item.wholesale_price / 100; // Convert cents to dollars
-      lineItem.originalUnitPrice = wholesalePrice.toFixed(2);
-      
-      if (item.has_wholesale_discount && item.discount_percent) {
-        itemNotes.push(`${item.title}: ${item.discount_percent}% wholesale discount applied`);
-        
-        lineItem.customAttributes = [
-          {
-            key: "retail_price",
-            value: `${(item.price / 100).toFixed(2)}`
-          },
-          {
-            key: "wholesale_discount",
-            value: `${item.discount_percent}%`
-          }
-        ];
-      }
-    }
-    // Fallback: Check if there's a price difference in cart.js
-    else if (item.final_price && item.original_price && item.final_price < item.original_price) {
-      const discountedPrice = item.final_price / 100;
-      lineItem.originalUnitPrice = discountedPrice.toFixed(2);
-      
-      const discountPercent = Math.round(((item.original_price - item.final_price) / item.original_price) * 100);
-      itemNotes.push(`${item.title}: ${discountPercent}% discount applied`);
-      
-      lineItem.customAttributes = [
-        {
-          key: "original_price",
-          value: `${(item.original_price / 100).toFixed(2)}`
-        },
-        {
-          key: "discount_applied",
-          value: `${discountPercent}%`
-        }
-      ];
-    }
-
-    lineItems.push(lineItem);
-  });
-  
-  console.log("Line items with wholesale pricing:", lineItems);
-  console.log("Discount notes:", itemNotes);
+  const lineItems = cart.items.map((item) => ({
+    quantity: item.quantity,
+    variantId: `gid://shopify/ProductVariant/${item.variant_id}`,
+  }));
 
   const shippingAddress = {
     firstName: customer?.first_name || "",
@@ -169,16 +107,16 @@ export async function action({ request }) {
   const billingAddressInput = useShipping
     ? shippingAddress
     : {
-        firstName: customer?.first_name || "",
-        lastName: customer?.last_name || "",
-        address1: billingAddress?.address1 || "",
-        address2: billingAddress?.apartment || "",
-        city: billingAddress?.city || "",
-        province: billingAddress?.state || "",
-        country: billingAddress?.country || "",
-        zip: billingAddress?.pin || "",
-        company: billingAddress?.company || "",
-      };
+      firstName: customer?.first_name || "",
+      lastName: customer?.last_name || "",
+      address1: billingAddress?.address1 || "",
+      address2: billingAddress?.apartment || "",
+      city: billingAddress?.city || "",
+      province: billingAddress?.state || "",
+      country: billingAddress?.country || "",
+      zip: billingAddress?.pin || "",
+      company: billingAddress?.company || "",
+    };
 
   const draftOrderMutation = `
     mutation draftOrderCreate($input: DraftOrderInput!) {
@@ -191,7 +129,15 @@ export async function action({ request }) {
             edges {
               node {
                 title quantity
-                variant { id title image { url } }
+               variant { 
+       id 
+  title 
+  image { url }
+  product {
+    featuredImage { url }
+  }
+}
+
                 originalUnitPriceSet { shopMoney { amount currencyCode } }
               }
             }
@@ -203,24 +149,18 @@ export async function action({ request }) {
   `;
 
   const createDraft = async (discount = 0, label = "Discount", tag = "") => {
-    // Build note with product discount info
-    let noteText = "Created via Draft Order App";
-    if (itemNotes.length > 0) {
-      noteText += "\n\nProduct Discounts Applied:\n" + itemNotes.join("\n");
-    }
-    
     const input = {
       visibleToCustomer: false,
       lineItems,
-      note: noteText,
+      note: "Created via Draft Order App",
       tags: tag ? [tag] : [],
       shippingAddress,
       billingAddress: billingAddressInput,
       ...(customer?.id
         ? { customerId: `gid://shopify/Customer/${customer.id}` }
         : customer?.email
-        ? { email: customer.email }
-        : {}),
+          ? { email: customer.email }
+          : {}),
       ...(discount > 0 && {
         appliedDiscount: {
           title: label,
@@ -249,30 +189,30 @@ export async function action({ request }) {
 
   try {
     let createdOrders = [];
-    
+
     // Check if double draft orders are enabled
     if (setting.doubleDraftOrdersEnabled && setting.discount1 > 0 && setting.discount2 > 0) {
       // Create TWO draft orders in PARALLEL (faster)
       console.log("Creating DOUBLE draft orders with discounts:", setting.discount1, setting.discount2);
-      
+
       const [order1, order2] = await Promise.all([
         createDraft(setting.discount1, "Discount Option 1", setting.tag1 || ""),
         createDraft(setting.discount2, "Discount Option 2", setting.tag2 || "")
       ]);
-      
+
       createdOrders.push(order1, order2);
       console.log("Two draft orders created successfully");
-      
+
     } else {
       // Create SINGLE draft order
       console.log("Creating SINGLE draft order with discount:", setting.singleDiscount);
-      
+
       const order = await createDraft(
-        setting.singleDiscount || 0, 
-        "Your Discount", 
+        setting.singleDiscount || 0,
+        "Your Discount",
         setting.singleTag || ""
       );
-      
+
       createdOrders.push(order);
       console.log("Single draft order created successfully");
     }
@@ -289,8 +229,8 @@ export async function action({ request }) {
 
     // Return immediately without waiting for email
     return json(
-      { 
-        success: true, 
+      {
+        success: true,
         drafts: createdOrders,
         emailQueued: !!(customer?.email && process.env.SMTP_USER && process.env.SMTP_PASS)
       },
@@ -312,7 +252,11 @@ async function sendEmailAsync(customer, order, shop) {
     order.lineItems.edges.forEach(({ node }) => {
       const price = parseFloat(node.originalUnitPriceSet.shopMoney.amount);
       const lineTotal = price * node.quantity;
-      const img = node.variant?.image?.url || "https://via.placeholder.com/80";
+      const img =
+        node.variant?.image?.url ||
+        node.variant?.product?.featuredImage?.url ||
+        "https://via.placeholder.com/80";
+
 
       itemsHtml += `
         <div style="display:flex; gap:16px; padding:12px 0; border-bottom:1px solid #eee;">

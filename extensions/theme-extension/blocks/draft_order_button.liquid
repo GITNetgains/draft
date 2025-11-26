@@ -347,9 +347,9 @@
       };
 
       const cart = await getCart();
-      console.log("cart",cart)
+      
       try {
-        const res = await fetch('https://scheme-caring-cottages-solaris.trycloudflare.com/api/create-draft-order', {
+        const res = await fetch('https://draft-lyart.vercel.app/api/create-draft-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
