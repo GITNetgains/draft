@@ -6,7 +6,7 @@ import nodemailer from "nodemailer";
 const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN;
 const SHOPIFY_ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
 
-// Reusable SMTP transporter (connection pooling)
+
 let emailTransporter = null;
 function getEmailTransporter() {
   if (!emailTransporter && process.env.SMTP_USER && process.env.SMTP_PASS) {
