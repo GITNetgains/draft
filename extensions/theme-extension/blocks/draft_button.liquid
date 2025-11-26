@@ -336,7 +336,7 @@ async function loadCountries(selectId, stateId) {
           
           const button = document.createElement('button');
           button.id = 'create-draft-order-notification';
-          button.textContent = '{{ block.settings.text | default: "Create Draft Order" | escape }}';
+          button.textContent = '{{ block.settings.text | default: "Partial Payment(40/60)" | escape }}';
           
           // Apply appropriate style
           if (container.classList.contains('cart-drawer') || container.id === 'CartDrawer') {
@@ -464,7 +464,7 @@ async function loadCountries(selectId, stateId) {
         try {
           // ⚠️ CRITICAL CHANGE: No longer sending 'shop' parameter
           // The backend now uses environment variables instead
-          const response = await fetch('https://draft-lyart.vercel.app/api/create-draft-order', {
+          const response = await fetch('https://scheme-caring-cottages-solaris.trycloudflare.com/api/create-draft-order', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -473,7 +473,7 @@ async function loadCountries(selectId, stateId) {
               address, 
               discount, 
               billingAddress, 
-              useShipping 
+              useShipping   
               // ⚠️ Removed: shop parameter
             })
           });
