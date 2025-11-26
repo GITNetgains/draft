@@ -18,7 +18,7 @@ function getEmailTransporter() {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      pool: true, // Enable connection pooling
+      pool: true, 
       maxConnections: 5,
       maxMessages: 100,
     });
@@ -107,16 +107,16 @@ export async function action({ request }) {
   const billingAddressInput = useShipping
     ? shippingAddress
     : {
-      firstName: customer?.first_name || "",
-      lastName: customer?.last_name || "",
-      address1: billingAddress?.address1 || "",
-      address2: billingAddress?.apartment || "",
-      city: billingAddress?.city || "",
-      province: billingAddress?.state || "",
-      country: billingAddress?.country || "",
-      zip: billingAddress?.pin || "",
-      company: billingAddress?.company || "",
-    };
+        firstName: customer?.first_name || "",
+        lastName: customer?.last_name || "",
+        address1: billingAddress?.address1 || "",
+        address2: billingAddress?.apartment || "",
+        city: billingAddress?.city || "",
+        province: billingAddress?.state || "",
+        country: billingAddress?.country || "",
+        zip: billingAddress?.pin || "",
+        company: billingAddress?.company || "",
+      };
 
   const draftOrderMutation = `
     mutation draftOrderCreate($input: DraftOrderInput!) {
@@ -130,7 +130,7 @@ export async function action({ request }) {
               node {
                 title quantity
                variant { 
-       id 
+  id 
   title 
   image { url }
   product {
@@ -159,8 +159,8 @@ export async function action({ request }) {
       ...(customer?.id
         ? { customerId: `gid://shopify/Customer/${customer.id}` }
         : customer?.email
-          ? { email: customer.email }
-          : {}),
+        ? { email: customer.email }
+        : {}),
       ...(discount > 0 && {
         appliedDiscount: {
           title: label,
@@ -189,30 +189,30 @@ export async function action({ request }) {
 
   try {
     let createdOrders = [];
-
+    
     // Check if double draft orders are enabled
     if (setting.doubleDraftOrdersEnabled && setting.discount1 > 0 && setting.discount2 > 0) {
       // Create TWO draft orders in PARALLEL (faster)
       console.log("Creating DOUBLE draft orders with discounts:", setting.discount1, setting.discount2);
-
+      
       const [order1, order2] = await Promise.all([
-        createDraft(setting.discount1, "Discount Option 1", setting.tag1 || ""),
-        createDraft(setting.discount2, "Discount Option 2", setting.tag2 || "")
+        createDraft(setting.discount1, "PAYNOW40", setting.tag1 || ""),
+        createDraft(setting.discount2, "FINAL60", setting.tag2 || "")
       ]);
-
+      
       createdOrders.push(order1, order2);
       console.log("Two draft orders created successfully");
-
+      
     } else {
       // Create SINGLE draft order
       console.log("Creating SINGLE draft order with discount:", setting.singleDiscount);
-
+      
       const order = await createDraft(
-        setting.singleDiscount || 0,
-        "Your Discount",
+        setting.singleDiscount || 0, 
+        "Your Discount", 
         setting.singleTag || ""
       );
-
+      
       createdOrders.push(order);
       console.log("Single draft order created successfully");
     }
@@ -229,8 +229,8 @@ export async function action({ request }) {
 
     // Return immediately without waiting for email
     return json(
-      {
-        success: true,
+      { 
+        success: true, 
         drafts: createdOrders,
         emailQueued: !!(customer?.email && process.env.SMTP_USER && process.env.SMTP_PASS)
       },
@@ -253,9 +253,9 @@ async function sendEmailAsync(customer, order, shop) {
       const price = parseFloat(node.originalUnitPriceSet.shopMoney.amount);
       const lineTotal = price * node.quantity;
       const img =
-        node.variant?.image?.url ||
-        node.variant?.product?.featuredImage?.url ||
-        "https://via.placeholder.com/80";
+  node.variant?.image?.url ||
+  node.variant?.product?.featuredImage?.url ||
+  "https://via.placeholder.com/80";
 
 
       itemsHtml += `
