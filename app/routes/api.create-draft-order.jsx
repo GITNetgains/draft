@@ -97,7 +97,7 @@ export async function action({ request }) {
     variantId: `gid://shopify/ProductVariant/${item.variant_id}`,
 
     priceOverride: {
-      amount: final,
+      amount: original,
       currencyCode: cart.currency
     },
 
