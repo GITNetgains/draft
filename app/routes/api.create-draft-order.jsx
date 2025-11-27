@@ -104,7 +104,7 @@ export async function action({ request }) {
     appliedDiscount: item.total_discount > 0 ? {
       title: item.discounts?.[0]?.title || "Discount",
       description: "",
-      value: percentageOff,
+      value: Number(percentageOff.toFixed(2)),
       valueType: "PERCENTAGE"
     } : undefined,
   };
