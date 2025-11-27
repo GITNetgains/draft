@@ -6,7 +6,6 @@ import nodemailer from "nodemailer";
 const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN;
 const SHOPIFY_ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
 
-
 let emailTransporter = null;
 function getEmailTransporter() {
   if (!emailTransporter && process.env.SMTP_USER && process.env.SMTP_PASS) {
@@ -18,7 +17,7 @@ function getEmailTransporter() {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      pool: true, 
+      pool: true,
       maxConnections: 5,
       maxMessages: 100,
     });
@@ -26,7 +25,6 @@ function getEmailTransporter() {
   return emailTransporter;
 }
 
-// Manual CORS helper
 function getCorsHeaders(request) {
   return {
     "Access-Control-Allow-Origin": request.headers.get("Origin") || "*",
@@ -40,7 +38,6 @@ export async function action({ request }) {
   const startTime = Date.now();
   console.log(`[${new Date().toISOString()}] Starting /api/create-draft-order`);
 
-  // Validate environment variables
   if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_ADMIN_TOKEN) {
     return sendError(
       request,
@@ -64,7 +61,6 @@ export async function action({ request }) {
 
   console.log(`Using configured store: ${shop}`);
 
-  // Load or create settings
   let setting = await db.setting.findUnique({ where: { shop } });
   if (!setting) {
     setting = await db.setting.create({
@@ -87,14 +83,19 @@ export async function action({ request }) {
     "X-Shopify-Access-Token": accessToken,
   };
 
-  const lineItems = cart.items.map((item) => ({
-    quantity: item.quantity,
-    variantId: `gid://shopify/ProductVariant/${item.variant_id}`,
-    priceOverride: {
-    amount: item.final_price / 100,  
-    currencyCode: cart.currency
-  }
-  }));
+  // Map line items with ORIGINAL price (before item-level discounts)
+  // and apply the discount later at order level
+  const lineItems = cart.items.map((item) => {
+    // Calculate the original price (before any discounts)
+    const originalPrice = item.original_price / 100;
+    
+    return {
+      quantity: item.quantity,
+      variantId: `gid://shopify/ProductVariant/${item.variant_id}`,
+      // Use ORIGINAL price here, not final_price
+      originalUnitPrice: originalPrice.toString(),
+    };
+  });
 
   const shippingAddress = {
     firstName: customer?.first_name || "",
@@ -128,23 +129,30 @@ export async function action({ request }) {
         draftOrder {
           id name invoiceUrl createdAt
           totalPriceSet { shopMoney { amount currencyCode } }
+          subtotalPriceSet { shopMoney { amount currencyCode } }
           customer { id email firstName lastName }
           lineItems(first: 250) {
             edges {
               node {
                 title quantity
-               variant { 
-  id 
-  title 
-  image { url }
-  product {
-    featuredImage { url }
-  }
-}
-
+                variant { 
+                  id 
+                  title 
+                  image { url }
+                  product {
+                    featuredImage { url }
+                  }
+                }
                 originalUnitPriceSet { shopMoney { amount currencyCode } }
+                discountedUnitPriceSet { shopMoney { amount currencyCode } }
               }
             }
+          }
+          appliedDiscount {
+            title
+            value
+            valueType
+            amountV2 { amount currencyCode }
           }
         }
         userErrors { field message }
@@ -165,6 +173,7 @@ export async function action({ request }) {
         : customer?.email
         ? { email: customer.email }
         : {}),
+      // Apply the discount at ORDER LEVEL (not line item level)
       ...(discount > 0 && {
         appliedDiscount: {
           title: label,
@@ -194,9 +203,7 @@ export async function action({ request }) {
   try {
     let createdOrders = [];
     
-    // Check if double draft orders are enabled
     if (setting.doubleDraftOrdersEnabled && setting.discount1 > 0 && setting.discount2 > 0) {
-      // Create TWO draft orders in PARALLEL (faster)
       console.log("Creating DOUBLE draft orders with discounts:", setting.discount1, setting.discount2);
       
       const [order1, order2] = await Promise.all([
@@ -208,7 +215,6 @@ export async function action({ request }) {
       console.log("Two draft orders created successfully");
       
     } else {
-      // Create SINGLE draft order
       console.log("Creating SINGLE draft order with discount:", setting.singleDiscount);
       
       const order = await createDraft(
@@ -223,15 +229,12 @@ export async function action({ request }) {
 
     console.log(`Draft orders created in ${Date.now() - startTime}ms`);
 
-    // OPTIMIZATION: Send email asynchronously (don't wait for it)
     if (customer?.email && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      // Fire and forget - don't await
       sendEmailAsync(customer, createdOrders[0], shop).catch(err => {
         console.error("Background email failed:", err.message);
       });
     }
 
-    // Return immediately without waiting for email
     return json(
       { 
         success: true, 
@@ -246,7 +249,6 @@ export async function action({ request }) {
   }
 }
 
-// OPTIMIZATION: Async email function (non-blocking)
 async function sendEmailAsync(customer, order, shop) {
   try {
     const transporter = getEmailTransporter();
@@ -254,13 +256,19 @@ async function sendEmailAsync(customer, order, shop) {
 
     let itemsHtml = "";
     order.lineItems.edges.forEach(({ node }) => {
-      const price = parseFloat(node.originalUnitPriceSet.shopMoney.amount);
-      const lineTotal = price * node.quantity;
+      const originalPrice = parseFloat(node.originalUnitPriceSet.shopMoney.amount);
+      const discountedPrice = parseFloat(node.discountedUnitPriceSet.shopMoney.amount);
+      const lineTotal = discountedPrice * node.quantity;
+      const originalLineTotal = originalPrice * node.quantity;
+      
+      // Calculate discount for this line
+      const lineDiscount = originalLineTotal - lineTotal;
+      const hasDiscount = lineDiscount > 0;
+      
       const img =
-  node.variant?.image?.url ||
-  node.variant?.product?.featuredImage?.url ||
-  "https://via.placeholder.com/80";
-
+        node.variant?.image?.url ||
+        node.variant?.product?.featuredImage?.url ||
+        "https://via.placeholder.com/80";
 
       itemsHtml += `
         <div style="display:flex; gap:16px; padding:12px 0; border-bottom:1px solid #eee;">
@@ -270,17 +278,33 @@ async function sendEmailAsync(customer, order, shop) {
             ${node.variant?.title !== "Default Title" ? `<div style="color:#666; font-size:14px;">${node.variant.title}</div>` : ""}
             <div style="color:#666; margin-top:4px;">Qty: ${node.quantity}</div>
           </div>
-          <div style="font-weight:600;">${node.originalUnitPriceSet.shopMoney.currencyCode} ${lineTotal.toFixed(2)}</div>
+          <div>
+            ${hasDiscount ? `
+              <div style="text-decoration: line-through; color:#999; font-size:14px;">
+                ${node.originalUnitPriceSet.shopMoney.currencyCode} ${originalLineTotal.toFixed(2)}
+              </div>
+              <div style="font-weight:600; color:#000;">
+                ${node.discountedUnitPriceSet.shopMoney.currencyCode} ${lineTotal.toFixed(2)}
+              </div>
+              <div style="color:#d9534f; font-size:12px; margin-top:2px;">
+                🎁 Discount (-${node.discountedUnitPriceSet.shopMoney.currencyCode} ${lineDiscount.toFixed(2)})
+              </div>
+            ` : `
+              <div style="font-weight:600;">
+                ${node.originalUnitPriceSet.shopMoney.currencyCode} ${lineTotal.toFixed(2)}
+              </div>
+            `}
+          </div>
         </div>`;
     });
 
     const currency = order.totalPriceSet.shopMoney.currencyCode;
     const orderTotal = parseFloat(order.totalPriceSet.shopMoney.amount).toFixed(2);
-  const shopName = shop
-  .replace(/^https?:\/\//, "")   // remove http/https if included
-  .replace(/^www\./, "")         // remove www.
-  .replace(/\.myshopify\.com$/, "") // remove .myshopify.com
-  .replace(/\.[^.]+$/, "");   
+    const shopName = shop
+      .replace(/^https?:\/\//, "")  
+      .replace(/^www\./, "")        
+      .replace(/\.myshopify\.com$/, "") 
+      .replace(/\.[^.]+$/, "");
 
     const html = `
       <!DOCTYPE html>
@@ -349,7 +373,6 @@ async function sendEmailAsync(customer, order, shop) {
   }
 }
 
-// Helper to send consistent errors with CORS
 function sendError(request, message, status = 500) {
   return json(
     { success: false, error: message },
@@ -357,7 +380,6 @@ function sendError(request, message, status = 500) {
   );
 }
 
-// Handle CORS preflight
 export async function loader({ request }) {
   if (request.method === "OPTIONS") {
     return new Response(null, {
