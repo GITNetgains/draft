@@ -304,7 +304,10 @@ document.addEventListener('DOMContentLoaded', () => {
             tick.style.transform = "scale(1)";
           }, 80);
 
-        
+          setTimeout(() => {
+            successModal.style.display = "none";
+            window.location.reload();
+          }, 10000);
 
         } else {
           const errorModal = document.getElementById("x-error-modal");
