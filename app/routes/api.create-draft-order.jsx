@@ -6,65 +6,18 @@ import nodemailer from "nodemailer";
 const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN;
 const SHOPIFY_ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
 
+// OPTIMIZATION 1: Cache settings in memory (refresh every 5 minutes)
+let settingsCache = null;
+let settingsCacheTime = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-let emailTransporter = null;
-function getEmailTransporter() {
-  if (!emailTransporter && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    emailTransporter = nodemailer.createTransport({
-      host: "smtp.netgains.org",
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      pool: true, 
-      maxConnections: 5,
-      maxMessages: 100,
-    });
+async function getCachedSettings(shop) {
+  const now = Date.now();
+  
+  if (settingsCache && settingsCache.shop === shop && (now - settingsCacheTime) < CACHE_TTL) {
+    return settingsCache;
   }
-  return emailTransporter;
-}
-
-// Manual CORS helper
-function getCorsHeaders(request) {
-  return {
-    "Access-Control-Allow-Origin": request.headers.get("Origin") || "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Vary": "Origin",
-  };
-}
-
-export async function action({ request }) {
-  const startTime = Date.now();
-  console.log(`[${new Date().toISOString()}] Starting /api/create-draft-order`);
-
-  // Validate environment variables
-  if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_ADMIN_TOKEN) {
-    return sendError(
-      request,
-      "Server configuration error: Missing SHOPIFY_STORE_DOMAIN or SHOPIFY_ADMIN_TOKEN",
-      500
-    );
-  }
-
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return sendError(request, "Invalid JSON in request body", 400);
-  }
-
-  const { customer, cart, address, billingAddress, useShipping } = body;
-  if (!cart?.items?.length) return sendError(request, "Cart is empty", 400);
-
-  const shop = SHOPIFY_STORE_DOMAIN;
-  const accessToken = SHOPIFY_ADMIN_TOKEN;
-
-  console.log(`Using configured store: ${shop}`);
-
-  // Load or create settings
+  
   let setting = await db.setting.findUnique({ where: { shop } });
   if (!setting) {
     setting = await db.setting.create({
@@ -80,6 +33,66 @@ export async function action({ request }) {
       },
     });
   }
+  
+  settingsCache = setting;
+  settingsCacheTime = now;
+  return setting;
+}
+
+// OPTIMIZATION 2: Reuse email transporter connection
+let emailTransporter = null;
+function getEmailTransporter() {
+  if (!emailTransporter && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    emailTransporter = nodemailer.createTransport({
+      host: "smtp.netgains.org",
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
+      connectionTimeout: 5000, // 5 seconds
+      greetingTimeout: 3000,
+    });
+  }
+  return emailTransporter;
+}
+
+function getCorsHeaders(request) {
+  return {
+    "Access-Control-Allow-Origin": request.headers.get("Origin") || "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Vary": "Origin",
+  };
+}
+
+export async function action({ request }) {
+  const startTime = Date.now();
+  console.log(`[${new Date().toISOString()}] Starting /api/create-draft-order`);
+
+  if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_ADMIN_TOKEN) {
+    return sendError(request, "Server configuration error", 500);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return sendError(request, "Invalid JSON in request body", 400);
+  }
+
+  const { customer, cart, address, billingAddress, useShipping } = body;
+  if (!cart?.items?.length) return sendError(request, "Cart is empty", 400);
+
+  const shop = SHOPIFY_STORE_DOMAIN;
+  const accessToken = SHOPIFY_ADMIN_TOKEN;
+
+  // OPTIMIZATION 3: Load settings from cache (faster than DB query)
+  const setting = await getCachedSettings(shop);
 
   const endpoint = `https://${shop}/admin/api/2024-10/graphql.json`;
   const headers = {
@@ -87,29 +100,26 @@ export async function action({ request }) {
     "X-Shopify-Access-Token": accessToken,
   };
 
- const lineItems = cart.items.map((item) => {
-  const original = item.original_price / 100;
-  const final = item.final_price / 100;
-  const percentageOff = original > 0 ? ((original - final) / original) * 100 : 0;
+  const lineItems = cart.items.map((item) => {
+    const original = item.original_price / 100;
+    const final = item.final_price / 100;
+    const percentageOff = original > 0 ? ((original - final) / original) * 100 : 0;
 
-  return {
-    quantity: item.quantity,
-    variantId: `gid://shopify/ProductVariant/${item.variant_id}`,
-
-    priceOverride: {
-      amount: original,
-      currencyCode: cart.currency
-    },
-
-    appliedDiscount: item.total_discount > 0 ? {
-      title: item.discounts?.[0]?.title || "Discount",
-      description: "",
-      value: Number(percentageOff.toFixed(2)),
-      valueType: "PERCENTAGE"
-    } : undefined,
-  };
-});
-
+    return {
+      quantity: item.quantity,
+      variantId: `gid://shopify/ProductVariant/${item.variant_id}`,
+      priceOverride: {
+        amount: original,
+        currencyCode: cart.currency
+      },
+      appliedDiscount: item.total_discount > 0 ? {
+        title: item.discounts?.[0]?.title || "Discount",
+        description: "",
+        value: Number(percentageOff.toFixed(2)),
+        valueType: "PERCENTAGE"
+      } : undefined,
+    };
+  });
 
   const shippingAddress = {
     firstName: customer?.first_name || "",
@@ -137,27 +147,30 @@ export async function action({ request }) {
         company: billingAddress?.company || "",
       };
 
+  // OPTIMIZATION 4: Fetch only essential fields (less data = faster)
   const draftOrderMutation = `
     mutation draftOrderCreate($input: DraftOrderInput!) {
       draftOrderCreate(input: $input) {
         draftOrder {
-          id name invoiceUrl createdAt
-          totalPriceSet { shopMoney { amount currencyCode } }
-          customer { id email firstName lastName }
-          lineItems(first: 250) {
+          id 
+          name 
+          invoiceUrl 
+          totalPriceSet { 
+            shopMoney { amount currencyCode } 
+          }
+          lineItems(first: 50) {
             edges {
               node {
-                title quantity
-               variant { 
-  id 
-  title 
-  image { url }
-  product {
-    featuredImage { url }
-  }
-}
-
-                originalUnitPriceSet { shopMoney { amount currencyCode } }
+                title 
+                quantity
+                variant { 
+                  id 
+                  title
+                  image { url(transform: { maxWidth: 100 }) }
+                }
+                originalUnitPriceSet { 
+                  shopMoney { amount currencyCode } 
+                }
               }
             }
           }
@@ -209,22 +222,18 @@ export async function action({ request }) {
   try {
     let createdOrders = [];
     
-    // Check if double draft orders are enabled
     if (setting.doubleDraftOrdersEnabled && setting.discount1 > 0 && setting.discount2 > 0) {
-      // Create TWO draft orders in PARALLEL (faster)
-      console.log("Creating DOUBLE draft orders with discounts:", setting.discount1, setting.discount2);
+      console.log("Creating DOUBLE draft orders");
       
       const [order1, order2] = await Promise.all([
-        createDraft(setting.discount1, "PAYNOW40", setting.tag1 || ""),
-        createDraft(setting.discount2, "FINAL60", setting.tag2 || "")
+        createDraft(setting.discount1, "PAYFINAL", setting.tag1 || ""),
+        createDraft(setting.discount2, "PAYINTIAL", setting.tag2 || "")
       ]);
       
       createdOrders.push(order1, order2);
-      console.log("Two draft orders created successfully");
       
     } else {
-      // Create SINGLE draft order
-      console.log("Creating SINGLE draft order with discount:", setting.singleDiscount);
+      console.log("Creating SINGLE draft order");
       
       const order = await createDraft(
         setting.singleDiscount || 0, 
@@ -233,25 +242,22 @@ export async function action({ request }) {
       );
       
       createdOrders.push(order);
-      console.log("Single draft order created successfully");
     }
 
-    console.log(`Draft orders created in ${Date.now() - startTime}ms`);
+    console.log(`✓ Draft orders created in ${Date.now() - startTime}ms`);
 
-    // OPTIMIZATION: Send email asynchronously (don't wait for it)
+    // Send email in background (non-blocking)
     if (customer?.email && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      // Fire and forget - don't await
       sendEmailAsync(customer, createdOrders[0], shop).catch(err => {
         console.error("Background email failed:", err.message);
       });
     }
 
-    // Return immediately without waiting for email
     return json(
       { 
         success: true, 
         drafts: createdOrders,
-        emailQueued: !!(customer?.email && process.env.SMTP_USER && process.env.SMTP_PASS)
+        timing: `${Date.now() - startTime}ms`
       },
       { headers: getCorsHeaders(request) }
     );
@@ -261,7 +267,6 @@ export async function action({ request }) {
   }
 }
 
-// OPTIMIZATION: Async email function (non-blocking)
 async function sendEmailAsync(customer, order, shop) {
   try {
     const transporter = getEmailTransporter();
@@ -271,11 +276,7 @@ async function sendEmailAsync(customer, order, shop) {
     order.lineItems.edges.forEach(({ node }) => {
       const price = parseFloat(node.originalUnitPriceSet.shopMoney.amount);
       const lineTotal = price * node.quantity;
-      const img =
-  node.variant?.image?.url ||
-  node.variant?.product?.featuredImage?.url ||
-  "https://via.placeholder.com/80";
-
+      const img = node.variant?.image?.url || "https://via.placeholder.com/80";
 
       itemsHtml += `
         <div style="display:flex; gap:16px; padding:12px 0; border-bottom:1px solid #eee;">
@@ -291,11 +292,11 @@ async function sendEmailAsync(customer, order, shop) {
 
     const currency = order.totalPriceSet.shopMoney.currencyCode;
     const orderTotal = parseFloat(order.totalPriceSet.shopMoney.amount).toFixed(2);
-  const shopName = shop
-  .replace(/^https?:\/\//, "")   // remove http/https if included
-  .replace(/^www\./, "")         // remove www.
-  .replace(/\.myshopify\.com$/, "") // remove .myshopify.com
-  .replace(/\.[^.]+$/, "");   
+    const shopName = shop
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .replace(/\.myshopify\.com$/, "")
+      .replace(/\.[^.]+$/, "");
 
     const html = `
       <!DOCTYPE html>
@@ -360,11 +361,9 @@ async function sendEmailAsync(customer, order, shop) {
     console.log("Email sent successfully to:", customer.email);
   } catch (err) {
     console.error("Email error:", err.message);
-    throw err;
   }
 }
 
-// Helper to send consistent errors with CORS
 function sendError(request, message, status = 500) {
   return json(
     { success: false, error: message },
@@ -372,7 +371,6 @@ function sendError(request, message, status = 500) {
   );
 }
 
-// Handle CORS preflight
 export async function loader({ request }) {
   if (request.method === "OPTIONS") {
     return new Response(null, {

@@ -1,7 +1,6 @@
   <!-- Custom Draft Order Button + Modal -->
   <script id="x-draft-data-hub" type="application/json">
   {
-  
     "customer": {
       "id": {{ customer.id | json }},
       "email": {{ customer.email | json }},
@@ -144,6 +143,98 @@
       </button>
     </div>
   </div>
+<!-- SUCCESS MODAL -->
+<div id="x-success-modal"
+     style="display:none;position:fixed;inset:0;z-index:999999;
+            background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);
+            justify-content:center;align-items:center;">
+
+  <div style="background:white;width:90%;max-width:430px;
+              padding:32px;border-radius:10px;text-align:center;
+              box-shadow:0 8px 30px rgba(0,0,0,0.18);">
+
+      <!-- Big Green Tick -->
+      <div id="x-success-tick"
+           style="width:70px;height:70px;border-radius:50%;
+                  background:#39c36e;border:4px solid #39c36e;
+                  display:flex;justify-content:center;align-items:center;
+                  margin:0 auto 22px;font-size:38px;color:#FFFFFF;
+                  opacity:0;transform:scale(0.5);
+                  transition:all .35s ease;">
+         ✔
+      </div>
+
+      <h2 style="margin-bottom:10px;font-size:22px;font-weight:600;">
+      Your order has been received.
+      </h2>
+
+      <p style="color:#666;margin-bottom:32px;font-size:15px;line-height:1.45;">
+        Your draft order has been generated successfully.
+       Thank you for choosing the Partial Payment option (40% now / 60% later). We will send the invoice for the initial 40% payment shortly, and the remaining 60% will be invoiced at the time of shipping. Please stay active on your email to receive regular updates about your order.
+      </p>
+
+      <div style="display:flex;gap:12px;justify-content:center;">
+        
+        <button id="x-success-close"
+                 style="background:#1463ff;color:white;padding:12px 18px;
+                  border-radius:8px;font-size:16px;text-decoration:none;
+                  flex:1;text-align:center; border:none;outline:none;">
+          Close
+        </button>
+      </div>
+  </div>
+</div>
+
+<!-- ERROR MODAL -->
+<div id="x-error-modal"
+     style="display:none;position:fixed;inset:0;z-index:999999;
+            background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);
+            justify-content:center;align-items:center;">
+
+  <div style="background:white;width:90%;max-width:430px;
+              padding:32px;border-radius:10px;text-align:center;
+              box-shadow:0 8px 30px rgba(0,0,0,0.18);">
+
+      <!-- Big Red Cross -->
+      <div id="x-error-cross"
+           style="width:70px;height:70px;border-radius:50%;
+                  background:#d32f2f;border:4px solid #d32f2f;
+                  display:flex;justify-content:center;align-items:center;
+                  margin:0 auto 22px;font-size:38px;color:#FFFFFF; font-weight:700;
+                  opacity:0;transform:scale(0.5);
+                  transition:all .35s ease;">
+         ✖
+      </div>
+
+      <h2 style="margin-bottom:10px;font-size:22px;font-weight:600;color:#666">
+        We couldn't complete your order at the moment
+      </h2>
+
+      <p style="color:#666;margin-bottom:32px;font-size:15px;line-height:1.45;">
+        Please refresh the page and try again. If the issue continues, please
+        contact support with your email and order details.
+      </p>
+
+      <div style="display:flex;gap:12px;justify-content:center;">
+        
+        <button onclick="window.location.reload()"
+                style="background:#1463ff;color:white;padding:12px 18px;
+                       border:none;border-radius:8px;font-size:16px;
+                       cursor:pointer;flex:1;">
+          Refresh Page
+        </button>
+<a href="mailto:hr@zioncases.com" style="flex:1;text-decoration:none;">
+  <button style="background:white;color:#444;
+                 border:1px solid #ccc;padding:12px 18px;
+                 border-radius:8px;font-size:16px;cursor:pointer;
+                 width:100%;">
+    Contact Support
+  </button>
+</a>
+
+      </div>
+  </div>
+</div>
 
   <style>
     .x-error-text {color:#d32f2f;font-size:13px;margin-top:4px;}
@@ -278,6 +369,8 @@
 
       document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(modal);
+        document.body.appendChild(document.getElementById('x-success-modal'));
+        document.body.appendChild(document.getElementById('x-error-modal'));
         loadCountries('x-ship-country', 'x-ship-state');
         loadCountries('x-bill-country', 'x-bill-state');
         document.getElementById('x-same-billing-chk').addEventListener('change', e => {
@@ -365,16 +458,61 @@
           
           const json = await res.json();
           
-          if (json.success) {
-            await fetch('/cart/clear.js', { method: 'POST' });
-            showToast("Draft order created successfully!");
-            setTimeout(() => location.reload(), 1500);
-          } else {
-            showToast("Error: " + json.error);
-          }
+          
+   if (json.success) {
+
+  await fetch('/cart/clear.js', { method: 'POST' });
+
+  modal.style.display = "none";
+
+  const successModal = document.getElementById("x-success-modal");
+  const tick = document.getElementById("x-success-tick");
+  const viewDraft = document.getElementById("x-view-draft");
+
+  // Set draft order link dynamically
+  viewDraft.href = json.draftOrderUrl;
+
+  successModal.style.display = "flex";
+
+  setTimeout(() => {
+    tick.style.opacity = "1";
+    tick.style.transform = "scale(1)";
+  }, 80);
+
+  // Auto close after 10 sec
+  setTimeout(() => {
+    successModal.style.display = "none";
+    window.location.reload();
+  }, 10000);
+
+} else {
+
+  modal.style.display = "none";
+
+  const errorModal = document.getElementById("x-error-modal");
+  const cross = document.getElementById("x-error-cross");
+
+  errorModal.style.display = "flex";
+
+  setTimeout(() => {
+    cross.style.opacity = "1";
+    cross.style.transform = "scale(1)";
+  }, 80);
+}
+
         } catch (err) {
-          showToast("Network error. Try again.");
-          console.error(err);
+          modal.style.display = "none";
+    const errorModal = document.getElementById("x-error-modal");
+    const cross = document.getElementById("x-error-cross");
+    
+    errorModal.style.display = "flex";
+    
+    setTimeout(() => {
+      cross.style.opacity = "1";
+      cross.style.transform = "scale(1)";
+    }, 100);
+    
+    console.error(err);
         } finally {
           submitBtn.disabled = false;
           submitTxt.style.display = 'inline';
@@ -386,6 +524,15 @@
     }
 
     initXDraft();
+   document.getElementById("x-success-close").onclick = () => {
+  document.getElementById("x-success-modal").style.display = "none";
+  window.location.reload();
+};
+
+document.getElementById("x-error-close").onclick = () => {
+  document.getElementById("x-error-modal").style.display = "none";
+};
+
   })();
   </script>
 
