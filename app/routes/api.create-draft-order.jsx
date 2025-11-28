@@ -358,68 +358,125 @@ async function sendEmailAsync(customer, orders, shop, isPartialPayment) {
   const order60 = orders.length > 1 ? orders[0] : null;
 
   const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f5f5f5;">
-      <div style="max-width:600px; margin:0 auto; background:#fff; padding:32px;">
+  <!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Order Has Been Received</title>
+  <!-- Import Poppins font from Google Fonts -->
+  <style type="text/css">
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+  </style>
+</head>
+<body style="margin:0; padding:0; font-family:'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color:#f5f5f5;">
+
+  <!-- Outer wrapper with light background -->
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f5f5f5;">
+    <tr>
+      <td align="center" style="padding: 20px 0;">
         
-        <div style="text-align:center; margin-bottom:24px;">
-          <h1 style="margin:0; font-size:24px; color:#333;">Your Order Has Been Received! </h1>
+        <!-- Main Content Container (Max width 600px, white background) -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px; background-color:#ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+          <tr>
+            <td style="padding: 30px 40px 10px 40px;" align="center">
+              
+              <!-- Logo Section -->
+              <div style="text-align:center; margin-bottom:20px;">
+                <img src="https://zioncaseswholesale.com/cdn/shop/files/Group_13526.png" alt="Zioncases Logo" width="150" height="40" style="display:block; margin:0 auto; max-width:150px; height:auto;">
+              </div>
+              
+              <!-- Confirmation Title (Revised to remove icon) -->
+              <h1 style="font-size: 26px; color: #36454F; margin: 0 0 10px 0; text-align: center; line-height: 1.2;">
+                Your Order Has Been Received
+              </h1>
+              <p style="font-size: 14px; color: #666666; margin: 0 0 30px 0; text-align: center;">
+                Partial Payment Option (40% now / 60% later) Selected
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding: 0 40px;">
+              
+              <!-- Greeting & Main Message -->
+              <p style="color:#36454F; line-height:1.6; margin: 0 0 10px 0;">
+                Hello ${customer?.first_name || "there"},
+              </p>
+              
+              <p style="color:#36454F; line-height:1.6; margin: 0 0 30px 0;">
+                ${orderMessage}
+              </p>
+
+              <!-- Conditional Draft Orders Section -->
+              ${hasMultipleOrders ? `
+                <div style="margin:20px 0;">
+                  
+                  <!-- First Payment Card (40%) -->
+                  <div style="background-color:#FFF3F2; padding:20px; border-radius:10px; margin-bottom:15px; border: 1px solid #f9e2e0;">
+                    <strong style="color:#ef3a24; font-size:16px; display:block; margin-bottom:8px;">First Payment (40%) - Invoice Coming Soon</strong>
+                    <p style="color:#36454F; line-height:1.5; margin: 0 0 5px 0;">
+                      <strong>Order ID:</strong> <span style="font-weight:600;">${order40.name}</span>
+                    </p>
+                    <p style="color:#36454F; line-height:1.5; margin: 0;">
+                      <!-- Placeholder for Amount removed as requested -->
+                    </p>
+                  </div>
+                  
+                  <!-- Final Payment Card (60%) -->
+                  <div style="background-color:#FFF3F2; padding:20px; border-radius:10px; border: 1px solid #f9e2e0;">
+                    <strong style="color:#ef3a24; font-size:16px; display:block; margin-bottom:8px;">Final Payment (60%) - Invoiced at Shipping</strong>
+                    <p style="color:#36454F; line-height:1.5; margin: 0 0 5px 0;">
+                      <strong>Order ID:</strong> <span style="font-weight:600;">${order60.name}</span>
+                    </p>
+                    <small style="color:#78909c; font-style:italic; display:block; margin-top:5px;">
+                      (Invoice will be sent upon shipping)
+                    </small>
+                  </div>
+                </div>
+              ` : ''}
+              
+              <!-- CTA Button (Updated color) -->
+              <div style="text-align:center; margin:30px 0;">
+                <a href="PLACEHOLDER_TRACKING_URL" style="display:inline-block; padding:12px 24px; background-color:#ef3a24; color:#ffffff; text-decoration:none; border-radius:25px; font-weight:600; font-size:15px; box-shadow: 0 2px 4px rgba(239, 58, 36, 0.4);">
+                  View Full Order Details
+                </a>
+              </div>
+              
+              <!-- Final Closing Text -->
+              <p style="color:#666666; font-size:14px; line-height:1.6; text-align:center; margin: 0 0 30px 0;">
+                We will update you on the status of your order and shipping details via this email.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer Section (Updated color) -->
+          <tr>
+            <td style="background-color:#090d1c; color:#ffffff; padding:20px 40px; text-align:center; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
+              <p style="font-size:12px; margin: 0 0 5px 0;">
+                &copy; 2025-2026 <a href="https://zioncaseswholesale.com/" style="color:#ef3a24; text-decoration:none;">Zioncases.com</a>
+              </p>
+              <p style="font-size:12px; margin: 0;">
+                Contact: <a href="mailto:sales@zioncases.com" style="color:#ef3a24; text-decoration:underline;">sales@zioncases.com</a>
+              </p>
+            </td>
+          </tr>
+          
+        </table>
         
-        </div>
-        
-        <p style="color:#333; line-height:1.6;">
-          Hi ${customer?.first_name || "there"},
-        </p>
-        
-        <p style="color:#333; line-height:1.6;">
-          ${orderMessage}
-        </p>
-        
-        ${hasMultipleOrders ? `
-        <div style="background:#e3f2fd; border-left:4px solid #2196f3; padding:16px; margin:20px 0; border-radius:4px;">
-          <strong style="color:#1976d2; font-size:16px;"> Your Draft Orders Created:</strong><br><br>
-          <div style="color:#424242; line-height:1.8;">
-            <div style="margin-bottom:8px;">
-              <strong>First Payment (40%):</strong><br>
-              <span style="color:#1976d2; font-weight:600;">Order ${order40.name}</span><br>
-              <small style="color:#666;">Amount: ${order40.totalPriceSet.shopMoney.currencyCode} ${parseFloat(order40.totalPriceSet.shopMoney.amount).toFixed(2)}</small>
-            </div>
-            <div style="margin-top:12px;">
-              <strong> Final Payment (60%):</strong><br>
-              <span style="color:#1976d2; font-weight:600;">Order ${order60.name}</span><br>
-              <small style="color:#666;">Amount: ${order60.totalPriceSet.shopMoney.currencyCode} ${parseFloat(order60.totalPriceSet.shopMoney.amount).toFixed(2)}</small><br>
-              <small style="color:#ff6f00; font-style:italic;">(Invoice will be sent at time of shipping)</small>
-            </div>
-          </div>
-        </div>
-        ` : ''}
-        
-       
-        <p style="color:#666; font-size:14px; line-height:1.6;">
-          If you have any questions about your order, please don't hesitate to contact us.
-        </p>
-        
-        <hr style="border:none; border-top:1px solid #eee; margin:24px 0;">
-        
-        <p style="color:#999; font-size:12px; text-align:center;">
-          © 2026 sales@zioncases.com. All rights reserved.
-        </p>
-        
-      </div>
-    </body>
-    </html>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
   `;
 
   const mailOptions = {
     from: `"${shopName}" <${process.env.SMTP_USER}>`,
     to: customer.email,
     subject: hasMultipleOrders 
-      ? `Order Received - Partial Payment (40% now / 60% later) - ${order40.name} & ${order60.name}` 
+      ? `Partial Payment Order Recieved - 40% Now 60% Later ` 
       : `Your order is ready – complete payment anytime!`,
     html,
   };
