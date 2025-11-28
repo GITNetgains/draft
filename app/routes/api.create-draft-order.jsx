@@ -39,26 +39,44 @@ async function getCachedSettings(shop) {
   return setting;
 }
 
-// OPTIMIZATION 2: Reuse email transporter connection
-let emailTransporter = null;
+// ✅ FIXED: Better email transporter configuration
 function getEmailTransporter() {
-  if (!emailTransporter && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    emailTransporter = nodemailer.createTransport({
-      host: "smtp.netgains.org",
-      port: 465,
-      secure: true,
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.error("❌ SMTP_USER or SMTP_PASS not set");
+    return null;
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587, // ✅ FIXED: Use 587 instead of 465
+      secure: false, // ✅ FIXED: false for port 587
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      pool: true,
-      maxConnections: 5,
-      maxMessages: 100,
-      connectionTimeout: 5000, // 5 seconds
-      greetingTimeout: 3000,
+      tls: {
+        rejectUnauthorized: false,
+      },
+      pool: false,
+      connectionTimeout: 10000,
+      greetingTimeout: 5000,
+      socketTimeout: 10000,
     });
+
+    transporter.verify((error) => {
+      if (error) {
+        console.error("❌ SMTP verification failed:", error);
+      } else {
+        console.log("✅ SMTP ready");
+      }
+    });
+
+    return transporter;
+  } catch (error) {
+    console.error("❌ Failed to create email transporter:", error);
+    return null;
   }
-  return emailTransporter;
 }
 
 function getCorsHeaders(request) {
@@ -223,14 +241,17 @@ export async function action({ request }) {
     let createdOrders = [];
     
     if (setting.doubleDraftOrdersEnabled && setting.discount1 > 0 && setting.discount2 > 0) {
-      console.log("Creating DOUBLE draft orders");
+      console.log("Creating DOUBLE draft orders (SWAPPED)");
       
-      const [order1, order2] = await Promise.all([
-        createDraft(setting.discount1, "PAYNOW40", setting.tag1 || ""),
-        createDraft(setting.discount2, "FINAL60", setting.tag2 || "")
+      // Create 60% first, then 40%
+      const [order60, order40] = await Promise.all([
+        createDraft(setting.discount2, "FINAL60", setting.tag2 || ""),
+        createDraft(setting.discount1, "PAYNOW40", setting.tag1 || "")
       ]);
       
-      createdOrders.push(order1, order2);
+      // Push in swapped order: 60% first, then 40%
+      createdOrders.push(order60, order40);
+      console.log(`✅ Created: ${order60.name} (60%), ${order40.name} (40%)`);
       
     } else {
       console.log("Creating SINGLE draft order");
@@ -246,121 +267,181 @@ export async function action({ request }) {
 
     console.log(`✓ Draft orders created in ${Date.now() - startTime}ms`);
 
-    // Send email in background (non-blocking)
-    if (customer?.email && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      sendEmailAsync(customer, createdOrders[0], shop).catch(err => {
-        console.error("Background email failed:", err.message);
-      });
+    // ✅ FIXED: Pass full orders array, not just first order
+    let emailSent = false;
+    let emailError = null;
+
+    if (customer?.email) {
+      console.log(`📧 Attempting to send email to: ${customer.email}`);
+      
+      try {
+        await sendEmailAsync(customer, createdOrders, shop, setting.doubleDraftOrdersEnabled);
+        emailSent = true;
+        console.log("✅ Email sent successfully");
+      } catch (err) {
+        emailError = err.message;
+        console.error("❌ Email failed:", err.message);
+      }
+    } else {
+      console.log("⚠️ No customer email provided");
     }
 
     return json(
       { 
         success: true, 
         drafts: createdOrders,
-        timing: `${Date.now() - startTime}ms`
+        timing: `${Date.now() - startTime}ms`,
+        emailSent,
+        emailError
       },
       { headers: getCorsHeaders(request) }
     );
   } catch (error) {
-    console.error("Draft creation failed:", error.message);
+    console.error("❌ Draft creation failed:", error.message);
     return sendError(request, error.message, 500);
   }
 }
 
-async function sendEmailAsync(customer, order, shop) {
-  try {
-    const transporter = getEmailTransporter();
-    if (!transporter) return;
+async function sendEmailAsync(customer, orders, shop, isPartialPayment) {
+  console.log("📧 sendEmailAsync called");
+  console.log("   Customer:", customer?.email);
+  console.log("   Orders count:", orders?.length);
+  console.log("   Shop:", shop);
 
-    let itemsHtml = "";
-    order.lineItems.edges.forEach(({ node }) => {
-      const price = parseFloat(node.originalUnitPriceSet.shopMoney.amount);
-      const lineTotal = price * node.quantity;
-      const img = node.variant?.image?.url || "https://via.placeholder.com/80";
+  const transporter = getEmailTransporter();
+  
+  if (!transporter) {
+    throw new Error("Email transporter not available - check SMTP credentials");
+  }
 
-      itemsHtml += `
-        <div style="display:flex; gap:16px; padding:12px 0; border-bottom:1px solid #eee;">
-          <img src="${img}" width="60" height="60" style="object-fit:cover; border-radius:6px;">
-          <div style="flex:1;">
-            <div style="font-weight:600;">${node.title}</div>
-            ${node.variant?.title !== "Default Title" ? `<div style="color:#666; font-size:14px;">${node.variant.title}</div>` : ""}
-            <div style="color:#666; margin-top:4px;">Qty: ${node.quantity}</div>
-          </div>
-          <div style="font-weight:600;">${node.originalUnitPriceSet.shopMoney.currencyCode} ${lineTotal.toFixed(2)}</div>
-        </div>`;
-    });
+  // Use the first order (60% in partial payment scenario)
+  const primaryOrder = orders[0];
+  const hasMultipleOrders = orders.length > 1;
 
-    const currency = order.totalPriceSet.shopMoney.currencyCode;
-    const orderTotal = parseFloat(order.totalPriceSet.shopMoney.amount).toFixed(2);
-    const shopName = shop
-      .replace(/^https?:\/\//, "")
-      .replace(/^www\./, "")
-      .replace(/\.myshopify\.com$/, "")
-      .replace(/\.[^.]+$/, "");
+  console.log("📋 Primary order:", primaryOrder.name);
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f5f5f5;">
-        <div style="max-width:600px; margin:0 auto; background:#fff; padding:32px;">
-          
-          <div style="text-align:center; margin-bottom:24px;">
-            <h1 style="margin:0; font-size:24px; color:#333;">Your Order is Ready!</h1>
-            <p style="color:#666; margin-top:8px;">Order ${order.name}</p>
-          </div>
-          
-          <p style="color:#333; line-height:1.6;">
-            Hi ${customer?.first_name || "there"},
-          </p>
-          
-          <p style="color:#333; line-height:1.6;">
-            Thank you for shopping with ${shopName}! Your draft order has been created and is ready for payment.
-          </p>
-          
-          <div style="background:#f9f9f9; border-radius:8px; padding:20px; margin:24px 0;">
-            <h3 style="margin:0 0 16px 0; font-size:16px; color:#333;">Order Summary</h3>
-            ${itemsHtml}
-            <div style="display:flex; justify-content:space-between; padding-top:16px; font-weight:700; font-size:18px;">
-              <span>Total</span>
-              <span>${currency} ${orderTotal}</span>
+  let itemsHtml = "";
+  primaryOrder.lineItems.edges.forEach(({ node }) => {
+    const price = parseFloat(node.originalUnitPriceSet.shopMoney.amount);
+    const lineTotal = price * node.quantity;
+    const img = node.variant?.image?.url || "https://via.placeholder.com/80";
+
+    itemsHtml += `
+      <div style="display:flex; gap:16px; padding:12px 0; border-bottom:1px solid #eee;">
+        <img src="${img}" width="60" height="60" style="object-fit:cover; border-radius:6px;">
+        <div style="flex:1;">
+          <div style="font-weight:600;">${node.title}</div>
+          ${node.variant?.title !== "Default Title" ? `<div style="color:#666; font-size:14px;">${node.variant.title}</div>` : ""}
+          <div style="color:#666; margin-top:4px;">Qty: ${node.quantity}</div>
+        </div>
+        <div style="font-weight:600;">${node.originalUnitPriceSet.shopMoney.currencyCode} ${lineTotal.toFixed(2)}</div>
+      </div>`;
+  });
+
+  const currency = primaryOrder.totalPriceSet.shopMoney.currencyCode;
+  const orderTotal = parseFloat(primaryOrder.totalPriceSet.shopMoney.amount).toFixed(2);
+  
+  const shopName = shop
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\.myshopify\.com$/, "")
+    .split('.')[0];
+
+  console.log("🏪 Shop name:", shopName);
+
+  const orderMessage = hasMultipleOrders 
+    ? `Your order has been received. Thank you for choosing the Partial Payment option (40% now / 60% later). We will send the invoice for the initial 40% payment shortly, and the remaining 60% will be invoiced at the time of shipping. Please stay active on your email to receive regular updates about your order.`
+    : `Your order has been received. Thank you for choosing the Partial Payment option (40% now / 60% later). We will send the invoice for the initial 40% payment shortly, and the remaining 60% will be invoiced at the time of shipping. Please stay active on your email to receive regular updates about your order.`;
+
+  // Get both order numbers for partial payment
+  const order40 = orders.length > 1 ? orders[1] : null;
+  const order60 = orders.length > 1 ? orders[0] : null;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f5f5f5;">
+      <div style="max-width:600px; margin:0 auto; background:#fff; padding:32px;">
+        
+        <div style="text-align:center; margin-bottom:24px;">
+          <h1 style="margin:0; font-size:24px; color:#333;">Your Order Has Been Received! </h1>
+        
+        </div>
+        
+        <p style="color:#333; line-height:1.6;">
+          Hi ${customer?.first_name || "there"},
+        </p>
+        
+        <p style="color:#333; line-height:1.6;">
+          ${orderMessage}
+        </p>
+        
+        ${hasMultipleOrders ? `
+        <div style="background:#e3f2fd; border-left:4px solid #2196f3; padding:16px; margin:20px 0; border-radius:4px;">
+          <strong style="color:#1976d2; font-size:16px;"> Your Draft Orders Created:</strong><br><br>
+          <div style="color:#424242; line-height:1.8;">
+            <div style="margin-bottom:8px;">
+              <strong>First Payment (40%):</strong><br>
+              <span style="color:#1976d2; font-weight:600;">Order ${order40.name}</span><br>
+              <small style="color:#666;">Amount: ${order40.totalPriceSet.shopMoney.currencyCode} ${parseFloat(order40.totalPriceSet.shopMoney.amount).toFixed(2)}</small>
+            </div>
+            <div style="margin-top:12px;">
+              <strong> Final Payment (60%):</strong><br>
+              <span style="color:#1976d2; font-weight:600;">Order ${order60.name}</span><br>
+              <small style="color:#666;">Amount: ${order60.totalPriceSet.shopMoney.currencyCode} ${parseFloat(order60.totalPriceSet.shopMoney.amount).toFixed(2)}</small><br>
+              <small style="color:#ff6f00; font-style:italic;">(Invoice will be sent at time of shipping)</small>
             </div>
           </div>
-          
-          <div style="text-align:center; margin:32px 0;">
-            <a href="${order.invoiceUrl}" style="display:inline-block; background:#000; color:#fff; padding:14px 32px; border-radius:6px; text-decoration:none; font-weight:600;">
-              Complete Payment
-            </a>
-          </div>
-          
-          <p style="color:#666; font-size:14px; line-height:1.6;">
-            If you have any questions about your order, please don't hesitate to contact us.
-          </p>
-          
-          <hr style="border:none; border-top:1px solid #eee; margin:24px 0;">
-          
-          <p style="color:#999; font-size:12px; text-align:center;">
-            © ${new Date().getFullYear()} ${shopName}. All rights reserved.
-          </p>
-          
         </div>
-      </body>
-      </html>
-    `;
+        ` : ''}
+        
+       
+        <p style="color:#666; font-size:14px; line-height:1.6;">
+          If you have any questions about your order, please don't hesitate to contact us.
+        </p>
+        
+        <hr style="border:none; border-top:1px solid #eee; margin:24px 0;">
+        
+        <p style="color:#999; font-size:12px; text-align:center;">
+          © 2026 sales@zioncases.com. All rights reserved.
+        </p>
+        
+      </div>
+    </body>
+    </html>
+  `;
 
-    await transporter.sendMail({
-      from: `"${shopName}" <${process.env.SMTP_USER}>`,
-      to: customer.email,
-      subject: "Your order is ready – complete payment anytime!",
-      html,
-    });
+  const mailOptions = {
+    from: `"${shopName}" <${process.env.SMTP_USER}>`,
+    to: customer.email,
+    subject: hasMultipleOrders 
+      ? `Order Received - Partial Payment (40% now / 60% later) - ${order40.name} & ${order60.name}` 
+      : `Your order is ready – complete payment anytime!`,
+    html,
+  };
 
-    console.log("Email sent successfully to:", customer.email);
-  } catch (err) {
-    console.error("Email error:", err.message);
+  console.log("📧 Sending email with options:", {
+    from: mailOptions.from,
+    to: mailOptions.to,
+    subject: mailOptions.subject
+  });
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log("✅ Email sent successfully!");
+    console.log("   Message ID:", info.messageId);
+    console.log("   Response:", info.response);
+    return info;
+  } catch (error) {
+    console.error("❌ Email sending failed:");
+    console.error("   Error:", error.message);
+    console.error("   Code:", error.code);
+    console.error("   Command:", error.command);
+    throw error;
   }
 }
 
