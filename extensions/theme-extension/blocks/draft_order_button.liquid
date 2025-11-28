@@ -1,568 +1,387 @@
-  <!-- Custom Draft Order Button + Modal -->
-  <script id="x-draft-data-hub" type="application/json">
-  {
-    "customer": {
-      "id": {{ customer.id | json }},
-      "email": {{ customer.email | json }},
-      "first_name": {{ customer.first_name | json }},
-      "last_name": {{ customer.last_name | json }}
-    }
+<!-- Custom Draft Order Button + Modal -->
+<script id="x-draft-data-hub" type="application/json">
+{
+  "customer": {
+    "id": {{ customer.id | json }},
+    "email": {{ customer.email | json }},
+    "first_name": {{ customer.first_name | json }},
+    "last_name": {{ customer.last_name | json }},
+    "default_address": {{ customer.default_address | json }}
   }
-  </script>
+}
+</script>
 
-  {% if template.name == 'cart' %}
-    {% if cart.item_count == 0 %}
+{% if template.name == 'cart' %}
+  {% if cart.item_count == 0 %}
+    <p style="text-align: center; margin: 20px 0; font-size: 16px; color: #555;">
+      <a href="/collections/all" style="color: #4f5051; text-decoration: none;">
+        Start adding your favorite items!
+      </a>
+    </p>
+  {% else %}
+    <div class="page-width" id="main" style="display:flex; justify-content: {{ block.settings.alignment | default: 'flex-end' }};">
+      <button
+        id="create-x-draft-order"
+        class="x-draft-main-btn"
+        style="
+          background-color: {{ block.settings.background_color | default: '#070707ff' }};
+          color: {{ block.settings.text_color | default: '#ffffff' }};
+          padding: 14px 24px;
+          border: none;
+          border-radius: 8px;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          width: 100%;
+          max-width: 380px;
+          white-space: nowrap;
+          margin: 20px auto;
+          transition: all 0.2s ease;
+        "
+        onmouseover="this.style.opacity='0.9'"
+        onmouseout="this.style.opacity='1'"
+      >
+        {{ block.settings.text | default: "Partial Payment(40/60)" | escape }}
+      </button>
       <p style="text-align: center; margin: 20px 0; font-size: 16px; color: #555;">
-        <a href="/collections/all" style="color: #4f5051; text-decoration: none;">
-          Start adding your favorite items!
-        </a>
+        {{ block.settings.para | default: "pay 40% now and 60% later" | escape }}
       </p>
-    {% else %}
-      <div class="page-width" id="main" style="display:flex; justify-content: {{ block.settings.alignment | default: 'flex-end' }};">
-        <button
-          id="create-x-draft-order"
-          class="x-draft-main-btn"
-          style="
-            background-color: {{ block.settings.background_color | default: '#070707ff' }};
-            color: {{ block.settings.text_color | default: '#ffffff' }};
-            padding: 14px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            max-width: 380px;
-            white-space: nowrap;
-            margin: 20px auto;
-            transition: all 0.2s ease;
-          "
-          onmouseover="this.style.opacity='0.9'"
-          onmouseout="this.style.opacity='1'"
-        >
-          {{ block.settings.text | default: "Partial Payment(40/60)" | escape }}
-        </button>
-          <p style="text-align: center; margin: 20px 0; font-size: 16px; color: #555;">
-          {{ block.settings.para | default: "Partial Payment(40/60)" | escape }}
-          </p>
-      </div>
-    {% endif %}
+    </div>
   {% endif %}
+{% endif %}
 
-  <!-- Fullscreen Modal -->
-  <div id="x-modal-container" style="display:none;position:fixed;inset:0;width:100vw;height:100vh;z-index:99999;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);justify-content:center;align-items:center;">
-    <div style="background:#fff;padding:24px;border-radius:12px;width:100%;max-width:600px;box-shadow:0 0 0 1px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.2);position:relative;overflow-y:auto;max-height:90vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-      <button id="x-close-modal-btn" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:24px;cursor:pointer;">×</button>
-      <h2 style="margin-bottom:20px;font-size:20px;">Shipping address</h2>
-
-      <div style="display:flex;flex-wrap:wrap;gap:16px;">
-        <div style="flex:1 1 100%;">
-          <label>Country</label>
-          <select id="x-ship-country" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;"><option value="">Select country</option></select>
-          <div class="x-error-text" id="x-err-country"></div>
-        </div>
-        <div style="flex:1 1 100%;">
-          <label>Company</label>
-          <input id="x-ship-company" type="text" placeholder="Optional" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-        </div>
-        <div style="flex:1 1 100%;">
-          <label>Address</label>
-          <input id="x-ship-addr1" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-          <div class="x-error-text" id="x-err-addr1"></div>
-        </div>
-        <div style="flex:1 1 100%;">
-          <label>Apartment / Suite</label>
-          <input id="x-ship-apt" type="text" placeholder="Optional" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-        </div>
-        <div style="flex:1 1 48%;">
-          <label>City</label>
-          <input id="x-ship-city" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-          <div class="x-error-text" id="x-err-city"></div>
-        </div>
-        <div style="flex:1 1 48%;">
-          <label>State</label>
-          <select id="x-ship-state" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;"><option value="">Select state</option></select>
-          <div class="x-error-text" id="x-err-state"></div>
-        </div>
-        <div style="flex:1 1 100%;">
-          <label>PIN code</label>
-          <input id="x-ship-pin" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-          <div class="x-error-text" id="x-err-pin"></div>
-        </div>
+<!-- Confirmation Modal -->
+<div id="x-modal-container" style="display:none;position:fixed;inset:0;width:100vw;height:100vh;z-index:99999;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);justify-content:center;align-items:center;">
+  <div style="background:#fff;padding:32px;border-radius:12px;width:100%;max-width:500px;box-shadow:0 0 0 1px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.2);position:relative;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    
+    <button id="x-close-modal-btn" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
+    
+   <div style="text-align:center;margin-bottom:32px;">
+      <div style="width:56px;height:56px;background:rgba(239, 58, 36, 0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef3a24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
       </div>
+      <h2 style="margin:0 0 12px 0;font-size:22px;font-weight:600;color:#333;">Partial Payment Option</h2>
+      <p style="color:#666;font-size:15px;line-height:1.6;margin:0;">
+        Are you sure you want to use the <strong>40% now / 60% later</strong> payment option?
+      </p>
+    </div>
 
-      <label style="display:flex;align-items:center;gap:10px;margin-top:20px;">
-        <input type="checkbox" id="x-same-billing-chk" checked />
-        Billing address is same as shipping address
-      </label>
-
-      <div id="x-billing-section" style="display:none;margin-top:20px;border-top:1px solid #ccc;padding-top:20px;">
-        <h3 style="margin-bottom:10px;">Billing Address</h3>
-        <div style="display:flex;flex-wrap:wrap;gap:16px;">
-          <div style="flex:1 1 100%;">
-            <label>Country</label>
-            <select id="x-bill-country" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;"><option value="">Select country</option></select>
-            <div class="x-error-text" id="x-err-bill-country"></div>
-          </div>
-          <div style="flex:1 1 48%;">
-            <label>City</label>
-            <input id="x-bill-city" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-            <div class="x-error-text" id="x-err-bill-city"></div>
-          </div>
-          <div style="flex:1 1 48%;">
-            <label>State</label>
-            <select id="x-bill-state" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;"><option value="">Select state</option></select>
-            <div class="x-error-text" id="x-err-bill-state"></div>
-          </div>
-          <div style="flex:1 1 100%;">
-            <label>Company</label>
-            <input id="x-bill-company" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-          </div>
-          <div style="flex:1 1 100%;">
-            <label>Address</label>
-            <input id="x-bill-addr1" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-            <div class="x-error-text" id="x-err-bill-addr1"></div>
-          </div>
-          <div style="flex:1 1 100%;">
-            <label>Apartment / Suite</label>
-            <input id="x-bill-apt" type="text" placeholder="Optional" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-          </div>
-          <div style="flex:1 1 100%;">
-            <label>PIN code</label>
-            <input id="x-bill-pin" type="text" style="width:100%;padding:10px 12px;border:1px solid #c9cccf;border-radius:6px;" />
-            <div class="x-error-text" id="x-err-bill-pin"></div>
-          </div>
-        </div>
+    <div style="background:#f9f9f9;border-radius:8px;padding:20px;margin-bottom:24px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px; padding-bottom:2px; border-bottom:1px dashed #e5e7eb >
+        <span style="color:#666;font-weight:600;">First Payment (40%)</span>
+        <span style="font-weight:600;color:#ef3a24;">Invoice coming soon</span>
       </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="color:#666; font-weight:600;">Final Payment (60%)</span>
+        <span style="font-weight:600;color:#333;">At shipping</span>
+      </div>
+    </div>
 
-      <button id="x-submit-draft-btn" style="background-color:{{ block.settings.background_color | default: '#070707ff' }};color:{{ block.settings.text_color | default: '#ffffff' }};padding:12px;width:100%;border:none;border-radius:6px;font-size:16px;margin-top:24px;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:8px;">
-        <span id="x-submit-text">Submit</span>
-        <svg id="x-submit-spinner" xmlns="http://www.w3.org/2000/svg" style="display:none;" width="20" height="20" viewBox="0 0 50 50">
+    <div style="display:flex;gap:12px;">
+      <button id="x-cancel-btn" style="flex:1;background:#fff;color:#333;border:1px solid #ddd;padding:12px;border-radius:6px;font-size:15px;font-weight:500;cursor:pointer;transition:all 0.2s;">
+        Cancel
+      </button>
+      
+      <button id="x-confirm-btn" style="flex:1;background-color:#ef3a24;color:{{ block.settings.text_color | default: '#ffffff' }};padding:12px;border:none;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:8px;">
+        <span id="x-confirm-text">Confirm</span>
+        <svg id="x-confirm-spinner" xmlns="http://www.w3.org/2000/svg" style="display:none;" width="20" height="20" viewBox="0 0 50 50">
           <circle cx="25" cy="25" r="20" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="30 150" />
         </svg>
       </button>
     </div>
+
   </div>
+</div>
+
 <!-- SUCCESS MODAL -->
-<div id="x-success-modal"
-     style="display:none;position:fixed;inset:0;z-index:999999;
-            background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);
-            justify-content:center;align-items:center;">
+<div id="x-success-modal" style="display:none;position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);justify-content:center;align-items:center;">
+  <div style="background:white;width:90%;max-width:430px;padding:32px;border-radius:10px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.18);">
+    <div id="x-success-tick" style="width:70px;height:70px;border-radius:50%;background:#39c36e;border:4px solid #39c36e;display:flex;justify-content:center;align-items:center;margin:0 auto 22px;font-size:38px;color:#FFFFFF;opacity:0;transform:scale(0.5);transition:all .35s ease;">
+      ✔
+    </div>
 
-  <div style="background:white;width:90%;max-width:430px;
-              padding:32px;border-radius:10px;text-align:center;
-              box-shadow:0 8px 30px rgba(0,0,0,0.18);">
+    <h2 style="margin-bottom:10px;font-size:22px;font-weight:600;">Your order has been received!</h2>
 
-      <!-- Big Green Tick -->
-      <div id="x-success-tick"
-           style="width:70px;height:70px;border-radius:50%;
-                  background:#39c36e;border:4px solid #39c36e;
-                  display:flex;justify-content:center;align-items:center;
-                  margin:0 auto 22px;font-size:38px;color:#FFFFFF;
-                  opacity:0;transform:scale(0.5);
-                  transition:all .35s ease;">
-         ✔
-      </div>
+    <p style="color:#666;margin-bottom:32px;font-size:15px;line-height:1.45;">
+      Thank you for choosing the Partial Payment option (40% now / 60% later). We will send the invoice for the initial 40% payment shortly, and the remaining 60% will be invoiced at the time of shipping. Please check your email for updates.
+    </p>
 
-      <h2 style="margin-bottom:10px;font-size:22px;font-weight:600;">
-      Your order has been received.
-      </h2>
-
-      <p style="color:#666;margin-bottom:32px;font-size:15px;line-height:1.45;">
-      Your order has been received.
-      Thank you for choosing the Partial Payment option (40% now / 60% later). We will send the invoice for the initial 40% payment shortly, and the remaining 60% will be invoiced at the time of shipping. Please stay active on your email to receive regular updates about your order.
-      </p>
-
-      <div style="display:flex;gap:12px;justify-content:center;">
-        
-        <button id="x-success-close"
-                 style="background:#1463ff;color:white;padding:12px 18px;
-                  border-radius:8px;font-size:16px;text-decoration:none;
-                  flex:1;text-align:center; border:none;outline:none;">
-          Close
-        </button>
-      </div>
+    <button id="x-success-close" style="background:#1463ff;color:white;padding:12px 24px;border-radius:8px;font-size:16px;border:none;cursor:pointer;width:100%;">
+      Close
+    </button>
   </div>
 </div>
 
 <!-- ERROR MODAL -->
-<div id="x-error-modal"
-     style="display:none;position:fixed;inset:0;z-index:999999;
-            background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);
-            justify-content:center;align-items:center;">
+<div id="x-error-modal" style="display:none;position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);justify-content:center;align-items:center;">
+  <div style="background:white;width:90%;max-width:430px;padding:32px;border-radius:10px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.18);">
+    <div id="x-error-cross" style="width:70px;height:70px;border-radius:50%;background:#d32f2f;border:4px solid #d32f2f;display:flex;justify-content:center;align-items:center;margin:0 auto 22px;font-size:38px;color:#FFFFFF;font-weight:700;opacity:0;transform:scale(0.5);transition:all .35s ease;">
+      ✖
+    </div>
 
-  <div style="background:white;width:90%;max-width:430px;
-              padding:32px;border-radius:10px;text-align:center;
-              box-shadow:0 8px 30px rgba(0,0,0,0.18);">
+    <h2 style="margin-bottom:10px;font-size:22px;font-weight:600;color:#666">We couldn't complete your order</h2>
 
-      <!-- Big Red Cross -->
-      <div id="x-error-cross"
-           style="width:70px;height:70px;border-radius:50%;
-                  background:#d32f2f;border:4px solid #d32f2f;
-                  display:flex;justify-content:center;align-items:center;
-                  margin:0 auto 22px;font-size:38px;color:#FFFFFF; font-weight:700;
-                  opacity:0;transform:scale(0.5);
-                  transition:all .35s ease;">
-         ✖
-      </div>
+    <p style="color:#666;margin-bottom:32px;font-size:15px;line-height:1.45;">
+      Please refresh the page and try again. If the issue continues, please contact support with your email and order details.
+    </p>
 
-      <h2 style="margin-bottom:10px;font-size:22px;font-weight:600;color:#666">
-        We couldn't complete your order at the moment
-      </h2>
-
-      <p style="color:#666;margin-bottom:32px;font-size:15px;line-height:1.45;">
-        Please refresh the page and try again. If the issue continues, please
-        contact support with your email and order details.
-      </p>
-
-      <div style="display:flex;gap:12px;justify-content:center;">
-        
-        <button onclick="window.location.reload()"
-                style="background:#1463ff;color:white;padding:12px 18px;
-                       border:none;border-radius:8px;font-size:16px;
-                       cursor:pointer;flex:1;">
-          Refresh Page
+    <div style="display:flex;gap:12px;justify-content:center;">
+      <button onclick="window.location.reload()" style="background:#1463ff;color:white;padding:12px 18px;border:none;border-radius:8px;font-size:16px;cursor:pointer;flex:1;">
+        Refresh Page
+      </button>
+      <a href="mailto:hr@zioncases.com" style="flex:1;text-decoration:none;">
+        <button style="background:white;color:#444;border:1px solid #ccc;padding:12px 18px;border-radius:8px;font-size:16px;cursor:pointer;width:100%;">
+          Contact Support
         </button>
-<a href="mailto:hr@zioncases.com" style="flex:1;text-decoration:none;">
-  <button style="background:white;color:#444;
-                 border:1px solid #ccc;padding:12px 18px;
-                 border-radius:8px;font-size:16px;cursor:pointer;
-                 width:100%;">
-    Contact Support
-  </button>
-</a>
-
-      </div>
+      </a>
+    </div>
   </div>
 </div>
 
-  <style>
-    .x-error-text {color:#d32f2f;font-size:13px;margin-top:4px;}
-    .x-draft-main-btn {display:block;width:100%;text-align:center;padding:14px;font-size:14px;font-weight:200;border:none;cursor:pointer;transition:all .2s ease;}
-    @keyframes x-spin {from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-  </style>
+<style>
+  .x-draft-main-btn {display:block;width:100%;text-align:center;padding:14px;font-size:14px;font-weight:200;border:none;cursor:pointer;transition:all .2s ease;}
+  @keyframes x-spin {from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+</style>
 
-  <script>
-  (function(){
-    const draftData = JSON.parse(document.getElementById('x-draft-data-hub').textContent);
-    
-    let toastHolder = document.createElement('div');
-    toastHolder.id = 'x-toast-holder';
-    toastHolder.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:1000000;display:flex;flex-direction:column;gap:10px;max-width:300px;width:100%;pointer-events:none;align-items:center;';
-    document.body.appendChild(toastHolder);
+<script>
+(function(){
+  const draftData = JSON.parse(document.getElementById('x-draft-data-hub').textContent);
+  
+  let toastHolder = document.createElement('div');
+  toastHolder.id = 'x-toast-holder';
+  toastHolder.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:1000000;display:flex;flex-direction:column;gap:10px;max-width:300px;width:100%;pointer-events:none;align-items:center;';
+  document.body.appendChild(toastHolder);
 
-    function showToast(msg, dur = 7000) {
-      const t = document.createElement('div');
-      t.style.cssText = 'background:rgba(0,0,0,0.8);color:white;padding:12px 20px;border-radius:6px;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,0.3);opacity:0;transition:opacity .3s;pointer-events:auto;';
-      t.textContent = msg;
-      toastHolder.appendChild(t);
-      requestAnimationFrame(() => { t.style.opacity = '1'; });
-      setTimeout(() => { t.style.opacity = '0'; t.addEventListener('transitionend', () => t.remove()); }, dur);
-    }
-
-  async function loadCountries(selectId, stateId) {
-    const countrySelect = document.getElementById(selectId);
-    const stateSelect = document.getElementById(stateId);
-
-    try {
-      // Load countries_full.json locally from Shopify assets
-      const res = await fetch('{{ "countries_full.json" | asset_url }}');
-      const data = await res.json();
-
-      const countries = data.data || data; // supports both structures
-
-      // Fill country dropdown
-      countries.forEach(c => {
-        countrySelect.add(new Option(c.name, c.name));
-      });
-
-      // When country changes → load states
-      countrySelect.addEventListener('change', () => {
-        const selected = countries.find(c => c.name === countrySelect.value);
-
-        stateSelect.innerHTML = '<option value="">Select state</option>';
-
-        if (selected?.states?.length) {
-          selected.states.forEach(state => {
-            stateSelect.add(new Option(state, state));
-          });
-        }
-      });
-    } catch (e) {
-      console.error("Error loading countries_full.json", e);
-    }
+  function showToast(msg, dur = 7000) {
+    const t = document.createElement('div');
+    t.style.cssText = 'background:rgba(0,0,0,0.8);color:white;padding:12px 20px;border-radius:6px;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,0.3);opacity:0;transition:opacity .3s;pointer-events:auto;';
+    t.textContent = msg;
+    toastHolder.appendChild(t);
+    requestAnimationFrame(() => { t.style.opacity = '1'; });
+    setTimeout(() => { t.style.opacity = '0'; t.addEventListener('transitionend', () => t.remove()); }, dur);
   }
 
+  let cartCache = null;
+  let lastCartFetch = 0;
+  const CART_FETCH_COOLDOWN = 2000;
+  let cartFetchPromise = null;
 
-    // Improved cart fetching with rate limit protection
-    let cartCache = null;
-    let lastCartFetch = 0;
-    const CART_FETCH_COOLDOWN = 2000;
-    let cartFetchPromise = null;
-
-    async function getCart() {
-      const now = Date.now();
-      
-      if (cartCache && (now - lastCartFetch) < CART_FETCH_COOLDOWN) {
-        return cartCache;
-      }
-      
-      if (cartFetchPromise) {
-        return cartFetchPromise;
-      }
-      
-      cartFetchPromise = (async () => {
-        try {
-          const res = await fetch('/cart.js');
-          
-          if (!res.ok) {
-            console.warn('Cart fetch failed with status:', res.status);
-            return cartCache || { items: [] };
-          }
-          
-          const text = await res.text();
-          
-          if (text.trim().startsWith('<')) {
-            console.warn('HTML returned instead of JSON (likely rate limit)');
-            return cartCache || { items: [] };
-          }
-          
-          const cart = JSON.parse(text);
-          cartCache = cart;
-          lastCartFetch = Date.now();
-          return cart;
-          
-        } catch (err) {
-          console.error('Cart fetch error', err);
-          return cartCache || { items: [] };
-        } finally {
-          cartFetchPromise = null;
-        }
-      })();
-      
+  async function getCart() {
+    const now = Date.now();
+    
+    if (cartCache && (now - lastCartFetch) < CART_FETCH_COOLDOWN) {
+      return cartCache;
+    }
+    
+    if (cartFetchPromise) {
       return cartFetchPromise;
     }
-
-    function clearErrors(fields) {
-      fields.forEach(f => {
-        const e = document.getElementById('x-err-' + f.id.split('-').pop());
-        if (e) e.textContent = '';
-      });
-    }
-
-    function initXDraft() {
-      const modal = document.getElementById('x-modal-container');
-      const closeBtn = document.getElementById('x-close-modal-btn');
-      const submitBtn = document.getElementById('x-submit-draft-btn');
-      const submitTxt = document.getElementById('x-submit-text');
-      const spinner = document.getElementById('x-submit-spinner');
-
-      async function openModal(e) {
-        e.preventDefault();
-        if (!draftData.customer?.email) { showToast("Please log in as a customer."); return; }
-        const cart = await getCart();
-        if (cart.items.length === 0) { showToast("Your cart is empty."); return; }
-        modal.style.display = 'flex';
+    
+    cartFetchPromise = (async () => {
+      try {
+        const res = await fetch('/cart.js');
+        
+        if (!res.ok) {
+          console.warn('Cart fetch failed with status:', res.status);
+          return cartCache || { items: [] };
+        }
+        
+        const text = await res.text();
+        
+        if (text.trim().startsWith('<')) {
+          console.warn('HTML returned instead of JSON (likely rate limit)');
+          return cartCache || { items: [] };
+        }
+        
+        const cart = JSON.parse(text);
+        cartCache = cart;
+        lastCartFetch = Date.now();
+        return cart;
+        
+      } catch (err) {
+        console.error('Cart fetch error', err);
+        return cartCache || { items: [] };
+      } finally {
+        cartFetchPromise = null;
       }
+    })();
+    
+    return cartFetchPromise;
+  }
 
-      document.querySelectorAll('#create-x-draft-order, .create-x-draft-order').forEach(b => b.addEventListener('click', openModal));
+  function initXDraft() {
+    const modal = document.getElementById('x-modal-container');
+    const closeBtn = document.getElementById('x-close-modal-btn');
+    const cancelBtn = document.getElementById('x-cancel-btn');
+    const confirmBtn = document.getElementById('x-confirm-btn');
+    const confirmTxt = document.getElementById('x-confirm-text');
+    const spinner = document.getElementById('x-confirm-spinner');
 
-      document.addEventListener('DOMContentLoaded', () => {
+    async function openModal(e) {
+      e.preventDefault();
+      
+      if (!draftData.customer?.email) {
+        showToast("Please log in to use this feature.");
+        return;
+      }
+      
+      if (!draftData.customer?.default_address) {
+        showToast("Please add a default address to your account first.");
+        return;
+      }
+      
+      const cart = await getCart();
+      if (cart.items.length === 0) {
+        showToast("Your cart is empty.");
+        return;
+      }
+      
+      modal.style.display = 'flex';
+    }
+document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(modal);
         document.body.appendChild(document.getElementById('x-success-modal'));
         document.body.appendChild(document.getElementById('x-error-modal'));
-        loadCountries('x-ship-country', 'x-ship-state');
-        loadCountries('x-bill-country', 'x-bill-state');
-        document.getElementById('x-same-billing-chk').addEventListener('change', e => {
-          document.getElementById('x-billing-section').style.display = e.target.checked ? 'none' : 'block';
-        });
       });
 
-      closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
-submitBtn.addEventListener('click', async () => {
-  const required = [
-    { id: 'x-ship-country', name: 'Country' },
-    { id: 'x-ship-addr1', name: 'Address' },
-    { id: 'x-ship-city', name: 'City' },
-    { id: 'x-ship-state', name: 'State' },
-    { id: 'x-ship-pin', name: 'PIN code' }
-  ];
+    document.querySelectorAll('#create-x-draft-order, .create-x-draft-order').forEach(b => b.addEventListener('click', openModal));
 
-  if (!document.getElementById('x-same-billing-chk').checked) {
-    required.push(
-      { id: 'x-bill-country', name: 'Billing Country' },
-      { id: 'x-bill-addr1', name: 'Billing Address' },
-      { id: 'x-bill-city', name: 'Billing City' },
-      { id: 'x-bill-state', name: 'Billing State' },
-      { id: 'x-bill-pin', name: 'Billing PIN' }
-    );
-  }
+    closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+    cancelBtn.addEventListener('click', () => { modal.style.display = 'none'; });
 
-  clearErrors(required);
+    confirmBtn.addEventListener('click', async () => {
+      confirmBtn.disabled = true;
+      confirmTxt.style.display = 'none';
+      spinner.style.display = 'inline-block';
+      spinner.style.animation = 'x-spin 1s linear infinite';
 
-  for (const f of required) {
-    const el = document.getElementById(f.id);
-    if (!el?.value.trim()) {
-      const errEl = document.getElementById('x-err-' + f.id.split('-').pop());
-      if (errEl) {
-        errEl.textContent = f.name + ' is required';
-        el?.focus();
+      const defaultAddr = draftData.customer.default_address;
+      
+      const address = {
+        address1: defaultAddr.address1 || '',
+        apartment: defaultAddr.address2 || '',
+        city: defaultAddr.city || '',
+        state: defaultAddr.province || '',
+        pin: defaultAddr.zip || '',
+        company: defaultAddr.company || '',
+        country: defaultAddr.country || ''
+      };
+
+      const cart = await getCart();
+
+      try {
+        const res = await fetch('https://draft-lyart.vercel.app/api/create-draft-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer: draftData.customer,
+            cart,
+            address: address,
+            billingAddress: address,
+            discount: cart.discount_codes?.[0] || null,
+            useShipping: true
+          })
+        });
+
+        const json = await res.json();
+
+        modal.style.display = 'none';
+
+        if (json.success) {
+          await fetch('/cart/clear.js', { method: 'POST' });
+          
+          const successModal = document.getElementById("x-success-modal");
+          const tick = document.getElementById("x-success-tick");
+          
+          successModal.style.display = "flex";
+          
+          setTimeout(() => {
+            tick.style.opacity = "1";
+            tick.style.transform = "scale(1)";
+          }, 80);
+
+          setTimeout(() => {
+            successModal.style.display = "none";
+            window.location.reload();
+          }, 10000);
+
+        } else {
+          const errorModal = document.getElementById("x-error-modal");
+          const cross = document.getElementById("x-error-cross");
+          
+          errorModal.style.display = "flex";
+          setTimeout(() => {
+            cross.style.opacity = "1";
+            cross.style.transform = "scale(1)";
+          }, 80);
+        }
+
+      } catch (err) {
+        modal.style.display = 'none';
+        
+        const errorModal = document.getElementById("x-error-modal");
+        const cross = document.getElementById("x-error-cross");
+
+        errorModal.style.display = "flex";
+
+        setTimeout(() => {
+          cross.style.opacity = "1";
+          cross.style.transform = "scale(1)";
+        }, 100);
+
+        console.error('Draft order creation error:', err);
+      } finally {
+        confirmBtn.disabled = false;
+        confirmTxt.style.display = 'inline';
+        spinner.style.display = 'none';
+        spinner.style.animation = '';
       }
-      return;
-    }
-  }
-
-  // Disable submit button
-  submitBtn.disabled = true;
-  submitTxt.style.display = 'none';
-  spinner.style.display = 'inline-block';
-  spinner.style.animation = 'x-spin 1s linear infinite';
-
-  const shipping = {
-    address1: document.getElementById('x-ship-addr1').value,
-    apartment: document.getElementById('x-ship-apt').value || '',
-    city: document.getElementById('x-ship-city').value,
-    state: document.getElementById('x-ship-state').value,
-    pin: document.getElementById('x-ship-pin').value,
-    company: document.getElementById('x-ship-company').value || '',
-    country: document.getElementById('x-ship-country').value
-  };
-
-  const billing = document.getElementById('x-same-billing-chk').checked ? shipping : {
-    address1: document.getElementById('x-bill-addr1').value,
-    apartment: document.getElementById('x-bill-apt').value || '',
-    city: document.getElementById('x-bill-city').value,
-    state: document.getElementById('x-bill-state').value,
-    pin: document.getElementById('x-bill-pin').value,
-    company: document.getElementById('x-bill-company').value || '',
-    country: document.getElementById('x-bill-country').value
-  };
-
-  const cart = await getCart();
-
-  try {
-    const res = await fetch('https://draft-lyart.vercel.app/api/create-draft-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        customer: draftData.customer,
-        cart,
-        address: shipping,
-        billingAddress: billing,
-        discount: cart.discount_codes?.[0] || null,
-        useShipping: document.getElementById('x-same-billing-chk').checked
-      })
     });
-
-    const json = await res.json();
-
-    // Hide the main modal first
-    modal.style.display = 'none';
-
-    if (json.success) {
-      // Clear cart on success
-      await fetch('/cart/clear.js', { method: 'POST' });
-      
-      const successModal = document.getElementById("x-success-modal");
-      const tick = document.getElementById("x-success-tick");
-      
-      // Set draft order link dynamically (if you have this element)
-      // viewDraft.href = json.draftOrderUrl; // Uncomment if you have this element
-      
-      successModal.style.display = "flex";
-      
-      setTimeout(() => {
-        tick.style.opacity = "1";
-        tick.style.transform = "scale(1)";
-      }, 80);
-
-      // Auto close after 10 seconds and reload
-      setTimeout(() => {
-        successModal.style.display = "none";
-        window.location.reload();
-      }, 10000);
-
-    } else {
-      // Show error modal for API failure
-      const errorModal = document.getElementById("x-error-modal");
-      const cross = document.getElementById("x-error-cross");
-      
-      errorModal.style.display = "flex";
-      setTimeout(() => {
-        cross.style.opacity = "1";
-        cross.style.transform = "scale(1)";
-      }, 80);
-    }
-
-  } catch (err) {
-    // Hide main modal
-    modal.style.display = 'none';
-    
-    // Show error modal for network/API errors
-    const errorModal = document.getElementById("x-error-modal");
-    const cross = document.getElementById("x-error-cross");
-
-    errorModal.style.display = "flex";
-
-    setTimeout(() => {
-      cross.style.opacity = "1";
-      cross.style.transform = "scale(1)";
-    }, 100);
-
-    console.error('Draft order creation error:', err);
-  } finally {
-    // Only reset the submit button - don't interfere with modal states
-    submitBtn.disabled = false;
-    submitTxt.style.display = 'inline';
-    spinner.style.display = 'none';
-    spinner.style.animation = '';
-    // Remove the modal.style.display = 'none' from here - it's handled in try/catch
   }
-});
+
+  initXDraft();
+  
+  document.getElementById("x-success-close").onclick = () => {
+    document.getElementById("x-success-modal").style.display = "none";
+    window.location.reload();
+  };
+
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Custom Draft Button",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "text",
+      "label": "Button Text",
+      "default": "Partial Payment (40/60)"
+    },
+    {
+      "type": "text",
+      "id": "para",
+      "label": "line Text",
+      "default": "pay 40% now and 60% later"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background Color",
+      "default": "#070707"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#ffffff"
     }
-
-    initXDraft();
-   document.getElementById("x-success-close").onclick = () => {
-  document.getElementById("x-success-modal").style.display = "none";
-  window.location.reload();
-};
-
-document.getElementById("x-error-close").onclick = () => {
-  document.getElementById("x-error-modal").style.display = "none";
-};
-
-  })();
-  </script>
-
-  {% schema %}
-  {
-    "name": "Custom Draft Button",
-    "target": "section",
-    "settings": [
-      {
-        "type": "text",
-        "id": "text",
-        "label": "Button Text",
-        "default": "Create Draft Order"
-      },
-      {
-        "type": "text",
-        "id": "para",
-        "label": "line Text",
-        "default": "pay 40% now and 60% later"
-      },
-      {
-        "type": "color",
-        "id": "background_color",
-        "label": "Background Color",
-        "default": "#070707"
-      },
-      {
-        "type": "color",
-        "id": "text_color",
-        "label": "Text Color",
-        "default": "#ffffff"
-      }
-    ]
-  }
-  {% endschema %}
+  ]
+}
+{% endschema %}

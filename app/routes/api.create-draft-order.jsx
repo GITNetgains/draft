@@ -430,18 +430,14 @@ async function sendEmailAsync(customer, orders, shop, isPartialPayment) {
                       <strong>Order ID:</strong> <span style="font-weight:600;">${order60.name}</span>
                     </p>
                     <small style="color:#78909c; font-style:italic; display:block; margin-top:5px;">
-                      (Invoice will be sent upon shipping)
+                      (Shipping will be calculated at checkout)
                     </small>
                   </div>
                 </div>
               ` : ''}
               
-              <!-- CTA Button (Updated color) -->
-              <div style="text-align:center; margin:30px 0;">
-                <a href="PLACEHOLDER_TRACKING_URL" style="display:inline-block; padding:12px 24px; background-color:#ef3a24; color:#ffffff; text-decoration:none; border-radius:25px; font-weight:600; font-size:15px; box-shadow: 0 2px 4px rgba(239, 58, 36, 0.4);">
-                  View Full Order Details
-                </a>
-              </div>
+             
+              
               
               <!-- Final Closing Text -->
               <p style="color:#666666; font-size:14px; line-height:1.6; text-align:center; margin: 0 0 30px 0;">
@@ -454,10 +450,10 @@ async function sendEmailAsync(customer, orders, shop, isPartialPayment) {
           <tr>
             <td style="background-color:#090d1c; color:#ffffff; padding:20px 40px; text-align:center; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
               <p style="font-size:12px; margin: 0 0 5px 0;">
-                &copy; 2025-2026 <a href="https://zioncaseswholesale.com/" style="color:#ef3a24; text-decoration:none;">Zioncases.com</a>
+                &copy; 2025-2026 <a href="https://zioncaseswholesale.com/" style="color:#ffffff; text-decoration:none;">Zioncases.com</a>
               </p>
               <p style="font-size:12px; margin: 0;">
-                Contact: <a href="mailto:sales@zioncases.com" style="color:#ef3a24; text-decoration:underline;">sales@zioncases.com</a>
+                Contact: <a href="mailto:sales@zioncases.com" style="color:#ffffff; text-decoration:underline;">sales@zioncases.com</a>
               </p>
             </td>
           </tr>
