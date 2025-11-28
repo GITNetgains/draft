@@ -226,8 +226,8 @@ export async function action({ request }) {
       console.log("Creating DOUBLE draft orders");
       
       const [order1, order2] = await Promise.all([
-        createDraft(setting.discount1, "PAYFINAL", setting.tag1 || ""),
-        createDraft(setting.discount2, "PAYINTIAL", setting.tag2 || "")
+        createDraft(setting.discount1, "PAYNOW40", setting.tag1 || ""),
+        createDraft(setting.discount2, "FINAL60", setting.tag2 || "")
       ]);
       
       createdOrders.push(order1, order2);

@@ -10,30 +10,8 @@
 </script>
 
 <!-- Fullscreen Modal Backdrop + Form -->
-<div id="modal-overlay" style="
-  display: none;
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 99999;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  justify-content: center;
-  align-items: center;
-">
-  <div style="
-    background: #fff;
-    padding: 24px;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 600px;
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.2);
-    position: relative;
-    overflow-y: auto;
-    max-height: 90vh;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  ">
+<div id="modal-overlay" style="display: none; position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 99999; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); justify-content: center; align-items: center;">
+  <div style="background: #fff; padding: 24px; border-radius: 12px; width: 100%; max-width: 600px; box-shadow: 0 0 0 1px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.2); position: relative; overflow-y: auto; max-height: 90vh; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
     <button id="close-modal" style="position: absolute;top: 12px;right: 12px;background: none;border: none;font-size: 24px;cursor: pointer;">&times;</button>
     <h2 style="margin-bottom: 20px; font-size: 20px;">Shipping address</h2>
 
@@ -125,21 +103,7 @@
       </div>
     </div>
 
-    <button id="submit-address" style="
-      background-color: {{ block.settings.background_color | default: '#070707ff' }};
-      color: {{ block.settings.text_color | default: '#ffffff' }};
-      padding: 12px;
-      width: 100%;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      margin-top: 24px;
-      cursor: pointer;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 8px;
-    ">
+    <button id="submit-address" style="background-color: {{ block.settings.background_color | default: '#070707ff' }}; color: {{ block.settings.text_color | default: '#ffffff' }}; padding: 12px; width: 100%; border: none; border-radius: 6px; font-size: 16px; margin-top: 24px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;">
       <span id="submit-text">Submit</span>
       <svg id="submit-loader" xmlns="http://www.w3.org/2000/svg" style="display:none;" width="20" height="20" viewBox="0 0 50 50">
         <circle cx="25" cy="25" r="20" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" />
@@ -149,95 +113,29 @@
 </div>
 
 <!-- SUCCESS MODAL -->
-<div id="x-success-modal"
-     style="display:none;position:fixed;inset:0;z-index:999999;
-            background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);
-            justify-content:center;align-items:center;">
-
-  <div style="background:white;width:90%;max-width:430px;
-              padding:32px;border-radius:10px;text-align:center;
-              box-shadow:0 8px 30px rgba(0,0,0,0.18);">
-
-      <!-- Big Green Tick -->
-      <div id="x-success-tick"
-           style="width:70px;height:70px;border-radius:50%;
-                  background:#39c36e;border:4px solid #39c36e;
-                  display:flex;justify-content:center;align-items:center;
-                  margin:0 auto 22px;font-size:38px;color:#FFFFFF;
-                  opacity:0;transform:scale(0.5);
-                  transition:all .35s ease;">
-         ✔
-      </div>
-
-      <h2 style="margin-bottom:10px;font-size:22px;font-weight:600;">
-      Your order has been received.
-      </h2>
-
-      <p style="color:#666;margin-bottom:32px;font-size:15px;line-height:1.45;">
-        Your draft order has been generated successfully.
-       Thank you for choosing the Partial Payment option (40% now / 60% later). We will send the invoice for the initial 40% payment shortly, and the remaining 60% will be invoiced at the time of shipping. Please stay active on your email to receive regular updates about your order.
-      </p>
-
-      <div style="display:flex;gap:12px;justify-content:center; ">
-        
-        <button id="x-success-close"
-                 style="background:#1463ff;color:white;padding:12px 18px;
-                  border-radius:8px;font-size:16px;text-decoration:none;
-                  flex:1;text-align:center; border:none;outline:none;">
-          Close
-        </button>
-      </div>
+<div id="x-success-modal" style="display:none;position:fixed;inset:0;z-index:999999; background:rgba(0,0,0,0.45);backdrop-filter:blur(4px); justify-content:center;align-items:center;">
+  <div style="background:white;width:90%;max-width:430px; padding:32px;border-radius:10px;text-align:center; box-shadow:0 8px 30px rgba(0,0,0,0.18);">
+    <div id="x-success-tick" style="width:70px;height:70px;border-radius:50%; background:#39c36e;border:4px solid #39c36e; display:flex;justify-content:center;align-items:center; margin:0 auto 22px;font-size:38px;color:#FFFFFF; opacity:0;transform:scale(0.5); transition:all .35s ease;">✔</div>
+    <h2 style="margin-bottom:10px;font-size:22px;font-weight:600;">Your order has been received.</h2>
+    <p style="color:#666;margin-bottom:32px;font-size:15px;line-height:1.45;">Your draft order has been generated successfully. Thank you for choosing the Partial Payment option (40% now / 60% later). We will send the invoice for the initial 40% payment shortly, and the remaining 60% will be invoiced at the time of shipping. Please stay active on your email to receive regular updates about your order.</p>
+    <div style="display:flex;gap:12px;justify-content:center;">
+      <button id="x-success-close" style="background:#1463ff;color:white;padding:12px 18px; border-radius:8px;font-size:16px;text-decoration:none; flex:1;text-align:center; border:none;outline:none;">Close</button>
+    </div>
   </div>
 </div>
 
 <!-- ERROR MODAL -->
-<div id="x-error-modal"
-     style="display:none;position:fixed;inset:0;z-index:999999;
-            background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);
-            justify-content:center;align-items:center;">
-
-  <div style="background:white;width:90%;max-width:430px;
-              padding:32px;border-radius:10px;text-align:center;
-              box-shadow:0 8px 30px rgba(0,0,0,0.18);">
-
-      <!-- Big Red Cross -->
-      <div id="x-error-cross"
-           style="width:70px;height:70px;border-radius:50%;
-                  background:#d32f2f;border:4px solid #d32f2f;
-                  display:flex;justify-content:center;align-items:center;
-                  margin:0 auto 22px;font-size:38px;color:#FFFFFF; font-weight:700;
-                  opacity:0;transform:scale(0.5);
-                  transition:all .35s ease;">
-         ✖
-      </div>
-
-      <h2 style="margin-bottom:10px;font-size:22px;font-weight:600;color:#666">
-        We couldn't complete your order at the moment
-      </h2>
-
-      <p style="color:#666;margin-bottom:32px;font-size:15px;line-height:1.45;">
-        Please refresh the page and try again. If the issue continues, please
-        contact support with your email and order details.
-      </p>
-
-      <div style="display:flex;gap:12px;justify-content:center;">
-        
-        <button onclick="window.location.reload()"
-                style="background:#1463ff;color:white;padding:12px 18px;
-                       border:none;border-radius:8px;font-size:16px;
-                       cursor:pointer;flex:1;">
-          Refresh Page
-        </button>
-<a href="mailto:hr@zioncases.com" style="flex:1;text-decoration:none;">
-  <button style="background:white;color:#444;
-                 border:1px solid #ccc;padding:12px 18px;
-                 border-radius:8px;font-size:16px;cursor:pointer;
-                 width:100%;">
-    Contact Support
-  </button>
-</a>
-
-      </div>
+<div id="x-error-modal" style="display:none;position:fixed;inset:0;z-index:999999; background:rgba(0,0,0,0.45);backdrop-filter:blur(4px); justify-content:center;align-items:center;">
+  <div style="background:white;width:90%;max-width:430px; padding:32px;border-radius:10px;text-align:center; box-shadow:0 8px 30px rgba(0,0,0,0.18);">
+    <div id="x-error-cross" style="width:70px;height:70px;border-radius:50%; background:#d32f2f;border:4px solid #d32f2f; display:flex;justify-content:center;align-items:center; margin:0 auto 22px;font-size:38px;color:#FFFFFF; font-weight:700; opacity:0;transform:scale(0.5); transition:all .35s ease;">✖</div>
+    <h2 style="margin-bottom:10px;font-size:22px;font-weight:600;color:#666">We couldn't complete your order at the moment</h2>
+    <p style="color:#666;margin-bottom:32px;font-size:15px;line-height:1.45;">Please refresh the page and try again. If the issue continues, please contact support with your email and order details.</p>
+    <div style="display:flex;gap:12px;justify-content:center;">
+      <button onclick="window.location.reload()" style="background:#1463ff;color:white;padding:12px 18px; border:none;border-radius:8px;font-size:16px; cursor:pointer;flex:1;">Refresh Page</button>
+      <a href="mailto:hr@zioncases.com" style="flex:1;text-decoration:none;">
+        <button style="background:white;color:#444; border:1px solid #ccc;padding:12px 18px; border-radius:8px;font-size:16px;cursor:pointer; width:100%;">Contact Support</button>
+      </a>
+    </div>
   </div>
 </div>
 
@@ -265,6 +163,10 @@
 
 <script>
 (function() {
+  // ===== PREVENT MULTIPLE INITIALIZATIONS =====
+  if (window.draftOrderInitialized) return;
+  window.draftOrderInitialized = true;
+
   const draftorderData = JSON.parse(document.getElementById('draftorder-data').textContent);
 
   // Toast container
@@ -282,72 +184,78 @@
     setTimeout(() => { toast.style.opacity = '0'; toast.addEventListener('transitionend', () => toast.remove()); }, duration);
   }
 
-async function loadCountries(selectId, stateId) {
-  const countrySelect = document.getElementById(selectId);
-  const stateSelect = document.getElementById(stateId);
+  // ===== OPTIMIZED COUNTRIES LOADING (ONCE) =====
+  let countriesData = null;
+  let countriesLoadPromise = null;
 
-  try {
-    // Load countries_full.json locally from Shopify assets
-    const res = await fetch('{{ "countries_full.json" | asset_url }}');
-    const data = await res.json();
+  async function loadCountriesOnce() {
+    if (countriesData) return countriesData;
+    if (countriesLoadPromise) return countriesLoadPromise;
 
-    const countries = data.data || data; // supports both structures
+    countriesLoadPromise = (async () => {
+      try {
+        const res = await fetch('{{ "countries_full.json" | asset_url }}');
+        countriesData = await res.json();
+        return countriesData.data || countriesData;
+      } catch (e) {
+        console.error("Error loading countries_full.json", e);
+        return [];
+      }
+    })();
 
-    // Fill country dropdown
+    return countriesLoadPromise;
+  }
+
+  async function setupCountryDropdown(selectId, stateId) {
+    const countrySelect = document.getElementById(selectId);
+    const stateSelect = document.getElementById(stateId);
+    
+    // Skip if already populated
+    if (countrySelect.options.length > 1) return;
+
+    const countries = await loadCountriesOnce();
+
     countries.forEach(c => {
       countrySelect.add(new Option(c.name, c.name));
     });
 
-    // When country changes → load states
     countrySelect.addEventListener('change', () => {
       const selected = countries.find(c => c.name === countrySelect.value);
-
       stateSelect.innerHTML = '<option value="">Select state</option>';
-
       if (selected?.states?.length) {
         selected.states.forEach(state => {
           stateSelect.add(new Option(state, state));
         });
       }
     });
-  } catch (e) {
-    console.error("Error loading countries_full.json", e);
   }
-}
 
-  // ===== IMPROVED CART FETCHING WITH RATE LIMIT PROTECTION =====
+  // ===== OPTIMIZED CART FETCHING =====
   let cachedCart = null;
   let lastCartFetch = 0;
-  const CART_FETCH_COOLDOWN = 2000; // 2 seconds minimum between fetches
+  const CART_FETCH_COOLDOWN = 3000; // 3 seconds
   let cartFetchPromise = null;
 
-  async function fetchCart() {
+  async function fetchCart(forceRefresh = false) {
     const now = Date.now();
     
-    // Return cache if within cooldown period
-    if (cachedCart && (now - lastCartFetch) < CART_FETCH_COOLDOWN) {
+    if (!forceRefresh && cachedCart && (now - lastCartFetch) < CART_FETCH_COOLDOWN) {
       return cachedCart;
     }
     
-    // If fetch already in progress, wait for it
-    if (cartFetchPromise) {
-      return cartFetchPromise;
-    }
+    if (cartFetchPromise) return cartFetchPromise;
     
     cartFetchPromise = (async () => {
       try {
         const res = await fetch('/cart.js');
-        
         if (!res.ok) {
-          console.warn('Cart fetch failed with status:', res.status);
+          console.warn('Cart fetch failed:', res.status);
           return cachedCart || { items: [] };
         }
         
         const text = await res.text();
-        
-        // Handle HTML response (rate limit returns HTML error page)
         if (text.trim().startsWith('<')) {
-          console.warn('HTML returned instead of JSON (rate limit)');
+          console.warn('Rate limit hit');
           return cachedCart || { items: [] };
         }
         
@@ -386,11 +294,17 @@ async function loadCountries(selectId, stateId) {
         showToast("Please log in as a customer.");
         return;
       }
-      const cart = await fetchCart();
+      
+      const cart = await fetchCart(true); // Force refresh on open
       if (!cart.items || cart.items.length === 0) {
         showToast("Your cart is empty. Please add items first.");
         return;
       }
+      
+      // Load countries only when modal opens
+      await setupCountryDropdown('country', 'state');
+      await setupCountryDropdown('billing-country', 'billing-state');
+      
       modal.style.display = 'flex';
     }
 
@@ -398,47 +312,41 @@ async function loadCountries(selectId, stateId) {
     const openBtn = document.getElementById('create-draft-order');
     if (openBtn) openBtn.addEventListener('click', handleDraftOrderClick);
 
-    // ===== CART NOTIFICATION/DRAWER BUTTON SETUP WITH THROTTLING =====
-    let setupTimeout = null;
-    let lastSetupTime = 0;
-    const SETUP_COOLDOWN = 1000; // 1 second between setups
+    // ===== OPTIMIZED CART NOTIFICATION BUTTON =====
+    let setupInProgress = false;
+    const processedContainers = new WeakSet();
 
-    function setupCartNotificationButton() {
-      const now = Date.now();
-      
-      // Throttle setup calls
-      if (now - lastSetupTime < SETUP_COOLDOWN) {
-        return;
-      }
-      lastSetupTime = now;
+    async function setupCartNotificationButton() {
+      if (setupInProgress) return;
+      setupInProgress = true;
 
-      fetchCart().then(cart => {
+      try {
+        const cart = await fetchCart();
         const containers = document.querySelectorAll('.cart-notification, #cart-notification, .cart-drawer, #CartDrawer');
         
         containers.forEach(container => {
+          // Skip if already processed
+          if (processedContainers.has(container)) return;
+          
           const existingBtn = container.querySelector('#create-draft-order-notification');
           
-          // Remove button if cart empty
           if (!cart.items || cart.items.length === 0) {
             if (existingBtn) existingBtn.remove();
             return;
           }
           
-          // Skip if button already exists
           if (existingBtn) return;
           
           const button = document.createElement('button');
           button.id = 'create-draft-order-notification';
           button.textContent = '{{ block.settings.text | default: "Partial Payment(40/60)" | escape }}';
           
-          // Apply appropriate style
           if (container.classList.contains('cart-drawer') || container.id === 'CartDrawer') {
             button.className = 'create-draft-order-btn drawer-style';
           } else {
             button.className = 'create-draft-order-btn notification-style';
           }
           
-          // Insert button
           const checkoutBtn = container.querySelector('[href="/checkout"], button[name="checkout"]');
           const linksSection = container.querySelector('.cart-notification__links, .cart-drawer__footer');
           
@@ -451,16 +359,23 @@ async function loadCountries(selectId, stateId) {
           }
           
           button.addEventListener('click', handleDraftOrderClick);
+          processedContainers.add(container);
         });
-      });
+      } finally {
+        setupInProgress = false;
+      }
     }
 
     // Initialize on DOMContentLoaded
-    document.addEventListener('DOMContentLoaded', () => {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+
+    function init() {
       modal.style.display = 'none';
       document.body.appendChild(modal);
-      loadCountries('country', 'state');
-      loadCountries('billing-country', 'billing-state');
       
       const billingToggle = document.getElementById('same-as-shipping');
       const billingForm = document.getElementById('billing-address-form');
@@ -471,22 +386,33 @@ async function loadCountries(selectId, stateId) {
       }
       
       setupCartNotificationButton();
-    });
+    }
 
-    // Event listeners for cart updates
-    document.addEventListener('cart:updated', setupCartNotificationButton);
+    // ===== DEBOUNCED EVENT LISTENERS =====
+    let updateTimeout;
+    function debouncedSetup() {
+      clearTimeout(updateTimeout);
+      updateTimeout = setTimeout(setupCartNotificationButton, 500);
+    }
+
+    document.addEventListener('cart:updated', debouncedSetup);
     document.addEventListener('cart:drawer:open', setupCartNotificationButton);
 
-    // ===== THROTTLED MUTATION OBSERVER =====
-    let mutationTimeout = null;
+    // ===== OPTIMIZED MUTATION OBSERVER =====
+    let mutationTimeout;
     const observer = new MutationObserver(() => {
-      if (mutationTimeout) clearTimeout(mutationTimeout);
-      mutationTimeout = setTimeout(() => {
-        setupCartNotificationButton();
-        mutationTimeout = null;
-      }, 1000); // 1 second debounce
+      clearTimeout(mutationTimeout);
+      mutationTimeout = setTimeout(setupCartNotificationButton, 2000);
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+    
+    // Only observe specific cart areas
+    const observeTargets = ['.cart-notification', '#cart-notification', '.cart-drawer', '#CartDrawer'];
+    observeTargets.forEach(selector => {
+      const target = document.querySelector(selector);
+      if (target) {
+        observer.observe(target, { childList: true, subtree: true });
+      }
+    });
 
     // Close modal
     if (closeBtn) closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
@@ -555,57 +481,44 @@ async function loadCountries(selectId, stateId) {
         const discount = cart.discount_codes?.[0] || null;
 
         try {
-          // ⚠️ CRITICAL CHANGE: No longer sending 'shop' parameter
-          // The backend now uses environment variables instead
           const response = await fetch('https://draft-lyart.vercel.app/api/create-draft-order', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              customer, 
-              cart, 
-              address, 
-              discount, 
-              billingAddress, 
-              useShipping 
-              // ⚠️ Removed: shop parameter
-            })
+            body: JSON.stringify({ customer, cart, address, discount, billingAddress, useShipping })
           });
 
           const result = await response.json();
 
-   if (result.success) {
-  await fetch('/cart/clear.js', { method: 'POST' });
-  modal.style.display = "none";
+          if (result.success) {
+            await fetch('/cart/clear.js', { method: 'POST' });
+            modal.style.display = "none";
 
-  const successModal = document.getElementById("x-success-modal");
-  const tick = document.getElementById("x-success-tick");
+            const successModal = document.getElementById("x-success-modal");
+            const tick = document.getElementById("x-success-tick");
 
+            successModal.style.display = "flex";
+            setTimeout(() => {
+              tick.style.opacity = "1";
+              tick.style.transform = "scale(1)";
+            }, 100);
 
-  successModal.style.display = "flex";
-  setTimeout(() => {
-    tick.style.opacity = "1";
-    tick.style.transform = "scale(1)";
-  }, 100);
+            setTimeout(() => {
+              successModal.style.display = "none";
+              window.location.reload();
+            }, 10000);
+          } else {
+            modal.style.display = "none";
 
-  setTimeout(() => {
-    successModal.style.display = "none";
-    window.location.reload();
-  }, 10000);
-} else {
+            const errorModal = document.getElementById("x-error-modal");
+            const cross = document.getElementById("x-error-cross");
 
-  modal.style.display = "none";
+            errorModal.style.display = "flex";
 
-  const errorModal = document.getElementById("x-error-modal");
-  const cross = document.getElementById("x-error-cross");
-
-  errorModal.style.display = "flex";
-
-  setTimeout(() => {
-    cross.style.opacity = "1";
-    cross.style.transform = "scale(1)";
-  }, 80);
-}
-
+            setTimeout(() => {
+              cross.style.opacity = "1";
+              cross.style.transform = "scale(1)";
+            }, 80);
+          }
         } catch (e) {
           showToast("An error occurred while creating draft order.");
           console.error(e);
@@ -614,21 +527,17 @@ async function loadCountries(selectId, stateId) {
           submitText.style.display = 'inline';
           submitLoader.style.display = 'none';
           submitLoader.style.animation = '';
-          modal.style.display = 'none';
         }
       });
     }
   }
 
   initializeDraftOrder();
-   document.getElementById("x-success-close").onclick = () => {
-  document.getElementById("x-success-modal").style.display = "none";
-  window.location.reload();
-};
-
-document.getElementById("x-error-close").onclick = () => {
-  document.getElementById("x-error-modal").style.display = "none";
-};
+  
+  document.getElementById("x-success-close").onclick = () => {
+    document.getElementById("x-success-modal").style.display = "none";
+    window.location.reload();
+  };
 })();
 </script>
 

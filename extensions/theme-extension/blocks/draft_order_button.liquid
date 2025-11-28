@@ -379,148 +379,146 @@
       });
 
       closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+submitBtn.addEventListener('click', async () => {
+  const required = [
+    { id: 'x-ship-country', name: 'Country' },
+    { id: 'x-ship-addr1', name: 'Address' },
+    { id: 'x-ship-city', name: 'City' },
+    { id: 'x-ship-state', name: 'State' },
+    { id: 'x-ship-pin', name: 'PIN code' }
+  ];
 
-      submitBtn.addEventListener('click', async () => {
-        
-        const required = [
-          { id: 'x-ship-country', name: 'Country' },
-          { id: 'x-ship-addr1', name: 'Address' },
-          { id: 'x-ship-city', name: 'City' },
-          { id: 'x-ship-state', name: 'State' },
-          { id: 'x-ship-pin', name: 'PIN code' }
-        ];
-        
-        if (!document.getElementById('x-same-billing-chk').checked) {
-          required.push(
-            { id: 'x-bill-country', name: 'Billing Country' },
-            { id: 'x-bill-addr1', name: 'Billing Address' },
-            { id: 'x-bill-city', name: 'Billing City' },
-            { id: 'x-bill-state', name: 'Billing State' },
-            { id: 'x-bill-pin', name: 'Billing PIN' }
-          );
-        }
-        
-        clearErrors(required);
-        
-        for (const f of required) {
-          const el = document.getElementById(f.id);
-          if (!el?.value.trim()) {
-            const errEl = document.getElementById('x-err-' + f.id.split('-').pop());
-            if (errEl) {
-              errEl.textContent = f.name + ' is required';
-              el?.focus();
-            }
-            return;
-          }
-        }
+  if (!document.getElementById('x-same-billing-chk').checked) {
+    required.push(
+      { id: 'x-bill-country', name: 'Billing Country' },
+      { id: 'x-bill-addr1', name: 'Billing Address' },
+      { id: 'x-bill-city', name: 'Billing City' },
+      { id: 'x-bill-state', name: 'Billing State' },
+      { id: 'x-bill-pin', name: 'Billing PIN' }
+    );
+  }
 
-        submitBtn.disabled = true;
-        submitTxt.style.display = 'none';
-        spinner.style.display = 'inline-block';
-        spinner.style.animation = 'x-spin 1s linear infinite';
+  clearErrors(required);
 
-        const shipping = {
-          address1: document.getElementById('x-ship-addr1').value,
-          apartment: document.getElementById('x-ship-apt').value || '',
-          city: document.getElementById('x-ship-city').value,
-          state: document.getElementById('x-ship-state').value,
-          pin: document.getElementById('x-ship-pin').value,
-          company: document.getElementById('x-ship-company').value || '',
-          country: document.getElementById('x-ship-country').value
-        };
-        
-        const billing = document.getElementById('x-same-billing-chk').checked ? shipping : {
-          address1: document.getElementById('x-bill-addr1').value,
-          apartment: document.getElementById('x-bill-apt').value || '',
-          city: document.getElementById('x-bill-city').value,
-          state: document.getElementById('x-bill-state').value,
-          pin: document.getElementById('x-bill-pin').value,
-          company: document.getElementById('x-bill-company').value || '',
-          country: document.getElementById('x-bill-country').value
-        };
+  for (const f of required) {
+    const el = document.getElementById(f.id);
+    if (!el?.value.trim()) {
+      const errEl = document.getElementById('x-err-' + f.id.split('-').pop());
+      if (errEl) {
+        errEl.textContent = f.name + ' is required';
+        el?.focus();
+      }
+      return;
+    }
+  }
 
-        const cart = await getCart();
-        
-        try {
-          const res = await fetch('https://draft-lyart.vercel.app/api/create-draft-order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              customer: draftData.customer,
-              cart,
-              address: shipping,
-              billingAddress: billing,
-              discount: cart.discount_codes?.[0] || null,
-            
-              useShipping: document.getElementById('x-same-billing-chk').checked
-            })
-          });
-          
-          const json = await res.json();
-          
-          
-   if (json.success) {
+  // Disable submit button
+  submitBtn.disabled = true;
+  submitTxt.style.display = 'none';
+  spinner.style.display = 'inline-block';
+  spinner.style.animation = 'x-spin 1s linear infinite';
 
-  await fetch('/cart/clear.js', { method: 'POST' });
+  const shipping = {
+    address1: document.getElementById('x-ship-addr1').value,
+    apartment: document.getElementById('x-ship-apt').value || '',
+    city: document.getElementById('x-ship-city').value,
+    state: document.getElementById('x-ship-state').value,
+    pin: document.getElementById('x-ship-pin').value,
+    company: document.getElementById('x-ship-company').value || '',
+    country: document.getElementById('x-ship-country').value
+  };
 
-  modal.style.display = "none";
+  const billing = document.getElementById('x-same-billing-chk').checked ? shipping : {
+    address1: document.getElementById('x-bill-addr1').value,
+    apartment: document.getElementById('x-bill-apt').value || '',
+    city: document.getElementById('x-bill-city').value,
+    state: document.getElementById('x-bill-state').value,
+    pin: document.getElementById('x-bill-pin').value,
+    company: document.getElementById('x-bill-company').value || '',
+    country: document.getElementById('x-bill-country').value
+  };
 
-  const successModal = document.getElementById("x-success-modal");
-  const tick = document.getElementById("x-success-tick");
-  const viewDraft = document.getElementById("x-view-draft");
+  const cart = await getCart();
 
-  // Set draft order link dynamically
-  viewDraft.href = json.draftOrderUrl;
+  try {
+    const res = await fetch('https://draft-lyart.vercel.app/api/create-draft-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer: draftData.customer,
+        cart,
+        address: shipping,
+        billingAddress: billing,
+        discount: cart.discount_codes?.[0] || null,
+        useShipping: document.getElementById('x-same-billing-chk').checked
+      })
+    });
 
-  successModal.style.display = "flex";
+    const json = await res.json();
 
-  setTimeout(() => {
-    tick.style.opacity = "1";
-    tick.style.transform = "scale(1)";
-  }, 80);
+    // Hide the main modal first
+    modal.style.display = 'none';
 
-  // Auto close after 10 sec
-  setTimeout(() => {
-    successModal.style.display = "none";
-    window.location.reload();
-  }, 10000);
+    if (json.success) {
+      // Clear cart on success
+      await fetch('/cart/clear.js', { method: 'POST' });
+      
+      const successModal = document.getElementById("x-success-modal");
+      const tick = document.getElementById("x-success-tick");
+      
+      // Set draft order link dynamically (if you have this element)
+      // viewDraft.href = json.draftOrderUrl; // Uncomment if you have this element
+      
+      successModal.style.display = "flex";
+      
+      setTimeout(() => {
+        tick.style.opacity = "1";
+        tick.style.transform = "scale(1)";
+      }, 80);
 
-} else {
+      // Auto close after 10 seconds and reload
+      setTimeout(() => {
+        successModal.style.display = "none";
+        window.location.reload();
+      }, 10000);
 
-  modal.style.display = "none";
+    } else {
+      // Show error modal for API failure
+      const errorModal = document.getElementById("x-error-modal");
+      const cross = document.getElementById("x-error-cross");
+      
+      errorModal.style.display = "flex";
+      setTimeout(() => {
+        cross.style.opacity = "1";
+        cross.style.transform = "scale(1)";
+      }, 80);
+    }
 
-  const errorModal = document.getElementById("x-error-modal");
-  const cross = document.getElementById("x-error-cross");
-
-  errorModal.style.display = "flex";
-
-  setTimeout(() => {
-    cross.style.opacity = "1";
-    cross.style.transform = "scale(1)";
-  }, 80);
-}
-
-        } catch (err) {
-          modal.style.display = "none";
+  } catch (err) {
+    // Hide main modal
+    modal.style.display = 'none';
+    
+    // Show error modal for network/API errors
     const errorModal = document.getElementById("x-error-modal");
     const cross = document.getElementById("x-error-cross");
-    
+
     errorModal.style.display = "flex";
-    
+
     setTimeout(() => {
       cross.style.opacity = "1";
       cross.style.transform = "scale(1)";
     }, 100);
-    
-    console.error(err);
-        } finally {
-          submitBtn.disabled = false;
-          submitTxt.style.display = 'inline';
-          spinner.style.display = 'none';
-          spinner.style.animation = '';
-          modal.style.display = 'none';
-        }
-      });
+
+    console.error('Draft order creation error:', err);
+  } finally {
+    // Only reset the submit button - don't interfere with modal states
+    submitBtn.disabled = false;
+    submitTxt.style.display = 'inline';
+    spinner.style.display = 'none';
+    spinner.style.animation = '';
+    // Remove the modal.style.display = 'none' from here - it's handled in try/catch
+  }
+});
     }
 
     initXDraft();
