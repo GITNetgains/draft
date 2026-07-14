@@ -89,6 +89,15 @@ function getCorsHeaders(request) {
 }
 
 export async function action({ request }) {
+  // Remix dispatches OPTIONS to the action, not the loader —
+  // preflight must be answered here or CORS fails.
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: getCorsHeaders(request),
+    });
+  }
+
   const startTime = Date.now();
   console.log(`[${new Date().toISOString()}] Starting /api/create-draft-order`);
 
