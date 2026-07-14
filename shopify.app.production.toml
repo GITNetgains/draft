@@ -2,7 +2,7 @@
 client_id = "5f7b8e1fd63414b1711ed83fa32c8489"
 name = "draft-order-button"
 handle = "draft-orders-button" 
-application_url = "https://draft-lyart.vercel.app/"
+application_url = "https://draft-git-main-gitnetgains-projects.vercel.app/"
 embedded = true
 
 [build]
@@ -25,7 +25,7 @@ api_version = "2025-07"
 scopes = "read_themes, write_themes,read_draft_orders,write_products,read_products,read_customers,write_draft_orders,write_customers"
 
 [auth]
-redirect_urls = ["https://draft-lyart.vercel.app/auth/callback", "https://draft-lyart.vercel.app/auth/shopify/callback", "https://draft-lyart.vercel.app/api/auth/callback"]
+redirect_urls = ["https://draft-git-main-gitnetgains-projects.vercel.app/auth/callback", "https://draft-git-main-gitnetgains-projects.vercel.app/auth/shopify/callback", "https://draft-git-main-gitnetgains-projects.vercel.app/api/auth/callback"]
 
 [pos]
 embedded = false
